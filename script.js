@@ -26,7 +26,6 @@ function moveCursor(rowDelta, colDelta) {
     cursor.col = Math.max(0, Math.min(COLS - 1, cursor.col + colDelta));
     
     if (cursor.row >= ROWS) {
-        // Scroll the grid up
         grid.shift();
         grid.push(Array.from({ length: COLS }, () => [...EMPTY_CELL]));
         cursor.row = ROWS - 1;
@@ -122,6 +121,7 @@ function handleKeyUp(e) {
         activeKeys.delete(key);
         if (activeKeys.size === 0) {
             moveCursor(0, 1);
+            currentCell = [...EMPTY_CELL];
         }
     }
     const button = document.querySelector(`[data-key="${key}"]`);
@@ -130,15 +130,18 @@ function handleKeyUp(e) {
 
 function handleSpace() {
     moveCursor(0, 1);
+    currentCell = [...EMPTY_CELL];
 }
 
 function handleEnter() {
     moveCursor(1, -cursor.col);
+    currentCell = [...EMPTY_CELL];
 }
 
 function handleBackspace() {
     if (cursor.col > 0 || cursor.row > 0) {
         moveCursor(0, -1);
+        currentCell = [...EMPTY_CELL];
         grid[cursor.row][cursor.col] = [...EMPTY_CELL];
         renderBrailleGrid();
     }
@@ -210,9 +213,9 @@ function handleTouchEnd(e) {
         }
     }
 
-    // Move to the next cell only if all keys are released
     if (activeKeys.size === 0) {
         moveCursor(0, 1);
+        currentCell = [...EMPTY_CELL];
     }
 }
 
