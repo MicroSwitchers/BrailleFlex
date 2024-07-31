@@ -189,6 +189,10 @@ function handleTouchStart(e) {
             closestKey.classList.add('active');
         } else if (key === 'space') {
             handleSpace();
+        } else if (key === 'enter') {
+            handleEnter();
+        } else if (key === 'backspace') {
+            handleBackspace();
         }
     }
 }
@@ -202,12 +206,30 @@ function handleTouchEnd(e) {
         const key = closestKey.getAttribute('data-key');
         if (KEY_MAP.hasOwnProperty(key)) {
             activeKeys.delete(key);
-            if (activeKeys.size === 0) {
-                moveCursor(0, 1);
-            }
             closestKey.classList.remove('active');
         }
     }
+
+    // Move to the next cell only if all keys are released
+    if (activeKeys.size === 0) {
+        moveCursor(0, 1);
+    }
+}
+
+function handleMultiTouch(e) {
+    e.preventDefault();
+    Array.from(e.touches).forEach(touch => {
+        const closestKey = findClosestKey(touch.clientX, touch.clientY);
+        if (closestKey) {
+            const key = closestKey.getAttribute('data-key');
+            if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+                activeKeys.add(key);
+                currentCell[KEY_MAP[key]] = 1;
+                updateGrid();
+                closestKey.classList.add('active');
+            }
+        }
+    });
 }
 
 // Event listeners
@@ -244,6 +266,7 @@ scrollToCursor();
 const keyContainer = document.querySelector('.key-container');
 keyContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
 keyContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+keyContainer.addEventListener('touchmove', handleMultiTouch, { passive: false });
 
 document.getElementById('spaceBtn').addEventListener('click', handleSpace);
 document.getElementById('enterBtn').addEventListener('click', handleEnter);
