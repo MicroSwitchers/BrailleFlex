@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Braille Notetaker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="braille-writer-app" class="card">
+        <div class="card-header">
+            <h2 id="braille-writer-simulator" class="card-title">Modern Braille Notetaker</h2>
+            <div class="header-buttons">
+                <button id="allClearBtn" class="small-button">Clear</button>
+                <button id="fullScreenBtn" class="small-button">Full</button>
+            </div>
+        </div>
+
+        <div class="card-content">
+            <div id="braille-grid" class="braille-grid"></div>
+
+            <div class="compact-buttons">
+                <button id="upBtn" class="nav-button">↑</button>
+                <button id="leftBtn" class="nav-button">←</button>
+                <button id="rightBtn" class="nav-button">→</button>
+                <button id="downBtn" class="nav-button">↓</button>
+                <button id="backspaceBtn" class="nav-button" data-key="backspace">⌫</button>
+                <button id="enterBtn" class="nav-button" data-key="enter">⏎</button>
+            </div>
+
+            <div class="key-container">
+                <button id="dot3Btn" class="key dot-key" data-key="s">3 (s)</button>
+                <button id="dot2Btn" class="key dot-key" data-key="d">2 (d)</button>
+                <button id="dot1Btn" class="key dot-key" data-key="f">1 (f)</button>
+                <button id="spaceBtn" class="key space-key" data-key="space">Space</button>
+                <button id="dot4Btn" class="key dot-key" data-key="j">4 (j)</button>
+                <button id="dot5Btn" class="key dot-key" data-key="k">5 (k)</button>
+                <button id="dot6Btn" class="key dot-key" data-key="l">6 (l)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="instructions-drawer" class="instructions-drawer">
+        <button id="instructions-toggle" class="instructions-toggle">Instructions & Settings</button>
+        <div class="instructions-content">
+            <!-- Instructions content here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
