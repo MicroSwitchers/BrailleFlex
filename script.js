@@ -9,17 +9,27 @@ let currentCell = [...EMPTY_CELL];
 let activeKeys = new Set();
 let isFullscreen = false;
 
-let keyPositions = {
-    s: { x: 0, y: 0, presses: [] },
-    d: { x: 1, y: 0, presses: [] },
-    f: { x: 2, y: 0, presses: [] },
-    j: { x: 3, y: 0, presses: [] },
-    k: { x: 4, y: 0, presses: [] },
-    l: { x: 5, y: 0, presses: [] },
+const initialPositions = {
+    s: { x: 0, y: 0 },
+    d: { x: 0, y: 0 },
+    f: { x: 0, y: 0 },
+    j: { x: 0, y: 0 },
+    k: { x: 0, y: 0 },
+    l: { x: 0, y: 0 },
 };
 
-const MAX_MOVE = 50;  // Maximum allowed movement in any direction
-const ADAPTATION_SPEED = 0.05;  // Adaptation speed for smooth movement
+let keyPositions = {
+    s: { x: 0, y: 0, presses: [] },
+    d: { x: 0, y: 0, presses: [] },
+    f: { x: 0, y: 0, presses: [] },
+    j: { x: 0, y: 0, presses: [] },
+    k: { x: 0, y: 0, presses: [] },
+    l: { x: 0, y: 0, presses: [] },
+};
+
+const MAX_MOVE = 50; // Maximum allowed movement in any direction
+const ADAPTATION_SPEED = 0.05; // Adaptation speed for smooth movement
+const BUTTON_RADIUS = 35; // Radius of each button for overlap checking
 
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
@@ -242,12 +252,35 @@ function adjustKeyPositions() {
             const avgX = positions.reduce((sum, pos) => sum + pos.x, 0) / positions.length;
             const avgY = positions.reduce((sum, pos) => sum + pos.y, 0) / positions.length;
 
-            keyPositions[key].x += (avgX - keyPositions[key].x) * ADAPTATION_SPEED;
-            keyPositions[key].y += (avgY - keyPositions[key].y) * ADAPTATION_SPEED;
+            let newX = keyPositions[key].x + (avgX - keyPositions[key].x) * ADAPTATION_SPEED;
+            let newY = keyPositions[key].y + (avgY - keyPositions[key].y) * ADAPTATION_SPEED;
 
             // Constrain movement within the maximum allowed range
-            keyPositions[key].x = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, keyPositions[key].x));
-            keyPositions[key].y = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, keyPositions[key].y));
+            newX = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newX));
+            newY = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newY));
+
+            // Ensure no overlap
+            const currentKeyIndex = Object.keys(keyPositions).indexOf(key);
+            const currentButton = dotButtons[currentKeyIndex];
+            let overlap = false;
+
+            dotButtons.forEach((otherButton, index) => {
+                if (otherButton !== currentButton) {
+                    const otherKey = otherButton.getAttribute('data-key');
+                    const otherPosition = keyPositions[otherKey];
+                    const dx = newX - otherPosition.x;
+                    const dy = newY - otherPosition.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < BUTTON_RADIUS * 2) {
+                        overlap = true;
+                    }
+                }
+            });
+
+            if (!overlap) {
+                keyPositions[key].x = newX;
+                keyPositions[key].y = newY;
+            }
         }
     });
     updateKeyStyles();
