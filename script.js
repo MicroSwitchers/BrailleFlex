@@ -228,16 +228,12 @@ function updateKeyRotation() {
     updateKeyArc();
 }
 
-function recordKeyPress(key, e) {
-    const rect = e.target.getBoundingClientRect();
-    const pressX = e.clientX - rect.left;
-    const pressY = e.clientY - rect.top;
-    
+function recordKeyPress(key, x, y) {
     const keyPos = keyPositions[key];
     keyPos.count++;
     
-    keyPos.x += (pressX - keyPos.x) / keyPos.count;
-    keyPos.y += (pressY - keyPos.y) / keyPos.count;
+    keyPos.x += (x - keyPos.x) / keyPos.count;
+    keyPos.y += (y - keyPos.y) / keyPos.count;
     
     adjustKeyPosition(key);
 }
@@ -298,13 +294,16 @@ dotButtons.forEach(btn => {
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
-            recordKeyPress(key, e.type.startsWith('touch') ? e.touches[0] : e);
+            const rect = btn.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left - rect.width / 2;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top - rect.height / 2;
+            recordKeyPress(key, x, y);
             updateGrid();
             btn.classList.add('active');
         }
     };
 
-    btn.addEventListener('touchstart', handlePress);
+    btn.addEventListener('touchstart', handlePress, { passive: false });
     btn.addEventListener('mousedown', handlePress);
 
     const handleRelease = (e) => {
