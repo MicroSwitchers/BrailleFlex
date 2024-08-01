@@ -9,6 +9,15 @@ let currentCell = [...EMPTY_CELL];
 let activeKeys = new Set();
 let isFullscreen = false;
 
+let keyPositions = {
+    s: { x: 0, y: 0, presses: [] },
+    d: { x: 1, y: 0, presses: [] },
+    f: { x: 2, y: 0, presses: [] },
+    j: { x: 3, y: 0, presses: [] },
+    k: { x: 4, y: 0, presses: [] },
+    l: { x: 5, y: 0, presses: [] },
+};
+
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
@@ -216,6 +225,40 @@ function updateKeyRotation() {
     updateKeyArc(); // This ensures the rotation is maintained when the arc is updated
 }
 
+function recordKeyPress(key, e) {
+    const rect = e.target.getBoundingClientRect();
+    const press = { x: e.clientX - rect.left - rect.width / 2, y: e.clientY - rect.top - rect.height / 2 };
+    keyPositions[key].presses.push(press);
+    adjustKeyPositions();
+}
+
+function adjustKeyPositions() {
+    Object.keys(keyPositions).forEach(key => {
+        const positions = keyPositions[key].presses;
+        if (positions.length > 0) {
+            const avgX = positions.reduce((sum, pos) => sum + pos.x, 0) / positions.length;
+            const avgY = positions.reduce((sum, pos) => sum + pos.y, 0) / positions.length;
+            keyPositions[key].x += (avgX - keyPositions[key].x) * 0.1;
+            keyPositions[key].y += (avgY - keyPositions[key].y) * 0.1;
+        }
+    });
+    updateKeyStyles();
+}
+
+function updateKeyStyles() {
+    dotButtons.forEach(btn => {
+        const key = btn.getAttribute('data-key');
+        if (keyPositions[key]) {
+            const { x, y } = keyPositions[key];
+            // Isolate the position transformation
+            let currentTransform = btn.style.transform;
+            currentTransform = currentTransform.replace(/translate\([^)]+\)/, '');
+            const newTransform = `translate(${x}px, ${y}px)`;
+            btn.style.transform = currentTransform + ' ' + newTransform;
+        }
+    });
+}
+
 settingsToggle.addEventListener('click', () => {
     settingsDrawer.classList.toggle('open');
 });
@@ -252,6 +295,7 @@ dotButtons.forEach(btn => {
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
+            recordKeyPress(key, e);
             updateGrid();
             btn.classList.add('active');
         }
@@ -275,6 +319,7 @@ dotButtons.forEach(btn => {
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
+            recordKeyPress(key, e);
             updateGrid();
             btn.classList.add('active');
         }
