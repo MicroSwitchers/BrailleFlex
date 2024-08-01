@@ -12,8 +12,24 @@ let isFullscreen = false;
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
-const instructionsToggle = document.getElementById('instructions-toggle');
-const instructionsDrawer = document.getElementById('instructions-drawer');
+const heightSlider = document.getElementById('heightSlider');
+const arcSlider = document.getElementById('arcSlider');
+const rotationSlider = document.getElementById('rotationSlider');
+const dotButtons = document.querySelectorAll('.dot-key');
+const spaceButton = document.getElementById('spaceBtn');
+const upButton = document.getElementById('upBtn');
+const downButton = document.getElementById('downBtn');
+const leftButton = document.getElementById('leftBtn');
+const rightButton = document.getElementById('rightBtn');
+const backspaceButton = document.getElementById('backspaceBtn');
+const enterButton = document.getElementById('enterBtn');
+const settingsToggle = document.getElementById('settings-toggle');
+const settingsDrawer = document.getElementById('settings-drawer');
+const settingsClose = document.getElementById('settings-close');
+
+const heightValue = document.getElementById('heightValue');
+const arcValue = document.getElementById('arcValue');
+const rotationValue = document.getElementById('rotationValue');
 
 function updateGrid() {
     grid[cursor.row][cursor.col] = [...currentCell];
@@ -22,15 +38,22 @@ function updateGrid() {
 }
 
 function moveCursor(rowDelta, colDelta) {
-    cursor.row = Math.max(0, Math.min(ROWS - 1, cursor.row + rowDelta));
-    cursor.col = Math.max(0, Math.min(COLS - 1, cursor.col + colDelta));
-    
-    if (cursor.row >= ROWS) {
-        grid.shift();
-        grid.push(Array.from({ length: COLS }, () => [...EMPTY_CELL]));
-        cursor.row = ROWS - 1;
+    const newRow = cursor.row + rowDelta;
+    const newCol = cursor.col + colDelta;
+
+    if (newRow >= 0 && newRow < ROWS) {
+        if (newCol >= 0 && newCol < COLS) {
+            cursor.row = newRow;
+            cursor.col = newCol;
+        } else if (newCol >= COLS && newRow + 1 < ROWS) {
+            cursor.row = newRow + 1;
+            cursor.col = 0;
+        } else if (newCol < 0 && newRow - 1 >= 0) {
+            cursor.row = newRow - 1;
+            cursor.col = COLS - 1;
+        }
     }
-    
+
     currentCell = [...grid[cursor.row][cursor.col]];
     renderBrailleGrid();
     scrollToCursor();
@@ -121,7 +144,6 @@ function handleKeyUp(e) {
         activeKeys.delete(key);
         if (activeKeys.size === 0) {
             moveCursor(0, 1);
-            currentCell = [...EMPTY_CELL];
         }
     }
     const button = document.querySelector(`[data-key="${key}"]`);
@@ -130,151 +152,172 @@ function handleKeyUp(e) {
 
 function handleSpace() {
     moveCursor(0, 1);
-    currentCell = [...EMPTY_CELL];
 }
 
 function handleEnter() {
     moveCursor(1, -cursor.col);
-    currentCell = [...EMPTY_CELL];
 }
 
 function handleBackspace() {
-    if (cursor.col > 0 || cursor.row > 0) {
-        moveCursor(0, -1);
-        currentCell = [...EMPTY_CELL];
-        grid[cursor.row][cursor.col] = [...EMPTY_CELL];
-        renderBrailleGrid();
+    if (cursor.col === 0 && cursor.row > 0) {
+        cursor.row--;
+        cursor.col = COLS - 1;
+    } else if (cursor.col > 0) {
+        cursor.col--;
     }
+    grid[cursor.row][cursor.col] = [...EMPTY_CELL];
+    renderBrailleGrid();
 }
 
-function getKeyCenter(keyElement) {
-    const rect = keyElement.getBoundingClientRect();
-    return {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
-    };
+function toggleFullscreen() {
+    if (isFullscreen) {
+        document.exitFullscreen();
+    } else {
+        document.documentElement.requestFullscreen();
+    }
+    isFullscreen = !isFullscreen;
+    fullScreenBtn.textContent = isFullscreen ? 'Exit Full' : 'Full';
 }
 
-function getDistance(point1, point2) {
-    const dx = point1.x - point2.x;
-    const dy = point1.y - point2.y;
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-function findClosestKey(touchX, touchY) {
-    const keys = document.querySelectorAll('.key');
-    let closestKey = null;
-    let closestDistance = Infinity;
-
-    keys.forEach(key => {
-        const keyCenter = getKeyCenter(key);
-        const distance = getDistance({ x: touchX, y: touchY }, keyCenter);
-        if (distance < closestDistance) {
-            closestDistance = distance;
-            closestKey = key;
-        }
+function updateKeyHeights() {
+    const height = heightSlider.value + 'px';
+    heightValue.textContent = heightSlider.value;
+    dotButtons.forEach(btn => {
+        btn.style.height = height;
+        btn.style.width = (parseInt(height) * 0.6) + 'px'; // Adjust the width to be a larger ratio of the height
     });
-
-    return closestKey;
+    spaceButton.style.height = (parseInt(height) * 0.8) + 'px';
 }
 
-function handleTouchStart(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const closestKey = findClosestKey(touch.clientX, touch.clientY);
-    
-    if (closestKey) {
-        const key = closestKey.getAttribute('data-key');
-        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
-            activeKeys.add(key);
-            currentCell[KEY_MAP[key]] = 1;
-            updateGrid();
-            closestKey.classList.add('active');
-        } else if (key === 'space') {
-            handleSpace();
-        } else if (key === 'enter') {
-            handleEnter();
-        } else if (key === 'backspace') {
-            handleBackspace();
-        }
-    }
-}
+function updateKeyArc() {
+    const arcValue = parseInt(arcSlider.value);
+    arcValue.textContent = arcSlider.value;
+    const totalKeys = dotButtons.length;
+    const midPoint = Math.floor(totalKeys / 2);
+    const rotationValue = parseInt(rotationSlider.value);
 
-function handleTouchEnd(e) {
-    e.preventDefault();
-    const touch = e.changedTouches[0];
-    const closestKey = findClosestKey(touch.clientX, touch.clientY);
-    
-    if (closestKey) {
-        const key = closestKey.getAttribute('data-key');
-        if (KEY_MAP.hasOwnProperty(key)) {
-            activeKeys.delete(key);
-            closestKey.classList.remove('active');
+    dotButtons.forEach((btn, index) => {
+        const distanceFromCenter = Math.abs(index - midPoint);
+        const offset = (arcValue * distanceFromCenter) / midPoint;
+        let rotate = 0;
+        const key = btn.getAttribute('data-key');
+        if (key === 's' || key === 'd' || key === 'f') {
+            rotate = rotationValue;
+        } else if (key === 'j' || key === 'k' || key === 'l') {
+            rotate = -rotationValue;
         }
-    }
-
-    if (activeKeys.size === 0) {
-        moveCursor(0, 1);
-        currentCell = [...EMPTY_CELL];
-    }
-}
-
-function handleMultiTouch(e) {
-    e.preventDefault();
-    Array.from(e.touches).forEach(touch => {
-        const closestKey = findClosestKey(touch.clientX, touch.clientY);
-        if (closestKey) {
-            const key = closestKey.getAttribute('data-key');
-            if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
-                activeKeys.add(key);
-                currentCell[KEY_MAP[key]] = 1;
-                updateGrid();
-                closestKey.classList.add('active');
-            }
-        }
+        btn.style.transform = `translateY(-${offset}px) rotate(${rotate}deg)`;
     });
 }
 
-// Event listeners
+function updateKeyRotation() {
+    const rotationValue = parseInt(rotationSlider.value);
+    rotationValue.textContent = rotationSlider.value;
+    updateKeyArc(); // This ensures the rotation is maintained when the arc is updated
+}
+
+settingsToggle.addEventListener('click', () => {
+    settingsDrawer.classList.toggle('open');
+});
+
+settingsClose.addEventListener('click', () => {
+    settingsDrawer.classList.remove('open');
+});
+
 document.addEventListener('keydown', handleKeyDown);
 document.addEventListener('keyup', handleKeyUp);
-
 allClearBtn.addEventListener('click', () => {
     grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
     cursor = { row: 0, col: 0 };
     currentCell = [...EMPTY_CELL];
     renderBrailleGrid();
-    scrollToCursor();
 });
+fullScreenBtn.addEventListener('click', toggleFullscreen);
+heightSlider.addEventListener('input', updateKeyHeights);
+arcSlider.addEventListener('input', updateKeyArc);
+rotationSlider.addEventListener('input', updateKeyRotation);
 
-fullScreenBtn.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
+upButton.addEventListener('click', () => moveCursor(-1, 0));
+downButton.addEventListener('click', () => moveCursor(1, 0));
+leftButton.addEventListener('click', () => moveCursor(0, -1));
+rightButton.addEventListener('click', () => moveCursor(0, 1));
+backspaceButton.addEventListener('click', handleBackspace);
+enterButton.addEventListener('click', handleEnter);
+
+// Touch and mouse event listeners for dot keys
+dotButtons.forEach(btn => {
+    btn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+            activeKeys.add(key);
+            currentCell[KEY_MAP[key]] = 1;
+            updateGrid();
+            btn.classList.add('active');
         }
-    }
+    });
+
+    btn.addEventListener('touchend', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key)) {
+            activeKeys.delete(key);
+            if (activeKeys.size === 0) {
+                moveCursor(0, 1);
+            }
+            btn.classList.remove('active');
+        }
+    });
+
+    btn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+            activeKeys.add(key);
+            currentCell[KEY_MAP[key]] = 1;
+            updateGrid();
+            btn.classList.add('active');
+        }
+    });
+
+    btn.addEventListener('mouseup', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key)) {
+            activeKeys.delete(key);
+            if (activeKeys.size === 0) {
+                moveCursor(0, 1);
+            }
+            btn.classList.remove('active');
+        }
+    });
 });
 
-instructionsToggle.addEventListener('click', () => {
-    instructionsDrawer.classList.toggle('open');
+// Touch and mouse event listeners for space button
+spaceButton.addEventListener('touchstart', e => {
+    e.preventDefault();
+    handleSpace();
+    spaceButton.classList.add('active');
 });
 
-// Initialize the app
+spaceButton.addEventListener('touchend', e => {
+    e.preventDefault();
+    spaceButton.classList.remove('active');
+});
+
+spaceButton.addEventListener('mousedown', e => {
+    e.preventDefault();
+    handleSpace();
+    spaceButton.classList.add('active');
+});
+
+spaceButton.addEventListener('mouseup', e => {
+    e.preventDefault();
+    spaceButton.classList.remove('active');
+});
+
+// Initial setting of key heights, arc, and rotation
+updateKeyHeights();
+updateKeyArc();
+updateKeyRotation();
 renderBrailleGrid();
-scrollToCursor();
-
-// Add touch events for intuitive input
-const keyContainer = document.querySelector('.key-container');
-keyContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-keyContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-keyContainer.addEventListener('touchmove', handleMultiTouch, { passive: false });
-
-document.getElementById('spaceBtn').addEventListener('click', handleSpace);
-document.getElementById('enterBtn').addEventListener('click', handleEnter);
-document.getElementById('backspaceBtn').addEventListener('click', handleBackspace);
-document.getElementById('upBtn').addEventListener('click', () => moveCursor(-1, 0));
-document.getElementById('downBtn').addEventListener('click', () => moveCursor(1, 0));
-document.getElementById('leftBtn').addEventListener('click', () => moveCursor(0, -1));
-document.getElementById('rightBtn').addEventListener('click', () => moveCursor(0, 1));

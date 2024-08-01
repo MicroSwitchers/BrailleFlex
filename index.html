@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Braille Notetaker</title>
+    <title>BrailleFlex</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="braille-writer-app" class="card">
         <div class="card-header">
-            <h2 id="braille-writer-simulator" class="card-title">Modern Braille Notetaker</h2>
+            <h2 id="braille-writer-simulator" class="card-title">BrailleFlex</h2>
             <div class="header-buttons">
                 <button id="allClearBtn" class="small-button">Clear</button>
                 <button id="fullScreenBtn" class="small-button">Full</button>
+                <button id="settings-toggle" class="small-button">Settings</button>
             </div>
         </div>
 
@@ -40,10 +41,26 @@
         </div>
     </div>
 
-    <div id="instructions-drawer" class="instructions-drawer">
-        <button id="instructions-toggle" class="instructions-toggle">Instructions & Settings</button>
-        <div class="instructions-content">
-            <!-- Instructions content here -->
+    <div id="settings-drawer" class="settings-drawer">
+        <button id="settings-close" class="settings-close">X</button>
+        <div class="settings-content">
+            <h3 class="settings-title">Settings</h3>
+            <div class="slider-container">
+                <div class="slider-section">
+                    <label for="heightSlider">Key Height: <span id="heightValue">140</span> px</label>
+                    <input type="range" id="heightSlider" min="90" max="190" step="10" value="140">
+                </div>
+
+                <div class="slider-section">
+                    <label for="arcSlider">Key Arc: <span id="arcValue">40</span> px</label>
+                    <input type="range" id="arcSlider" min="0" max="80" step="5" value="40">
+                </div>
+
+                <div class="slider-section">
+                    <label for="rotationSlider">Key Rotation: <span id="rotationValue">15</span>°</label>
+                    <input type="range" id="rotationSlider" min="0" max="30" step="5" value="15">
+                </div>
+            </div>
         </div>
     </div>
 
