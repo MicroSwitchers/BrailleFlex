@@ -1,22 +1,19 @@
 const ROWS = 20;
-const COLS = 25;
+const COLS = 43;
 const EMPTY_CELL = [0, 0, 0, 0, 0, 0];
 const KEY_MAP = { f: 0, d: 1, s: 2, j: 3, k: 4, l: 5 };
+
+// Constants for adaptation
+const ADAPTATION_SPEED = 0.05;
+const MAX_MOVE = 50;
+const BUTTON_RADIUS = 35;
+const ATTRACTION_THRESHOLD = 20;
 
 let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
 let cursor = { row: 0, col: 0 };
 let currentCell = [...EMPTY_CELL];
 let activeKeys = new Set();
 let isFullscreen = false;
-
-const initialPositions = {
-    s: { x: 0, y: 0 },
-    d: { x: 0, y: 0 },
-    f: { x: 0, y: 0 },
-    j: { x: 0, y: 0 },
-    k: { x: 0, y: 0 },
-    l: { x: 0, y: 0 },
-};
 
 let keyPositions = {
     s: { x: 0, y: 0, presses: [] },
@@ -27,10 +24,7 @@ let keyPositions = {
     l: { x: 0, y: 0, presses: [] },
 };
 
-const MAX_MOVE = 50; // Maximum allowed movement in any direction
-const ADAPTATION_SPEED = 0.05; // Adaptation speed for smooth movement
-const BUTTON_RADIUS = 35; // Radius of each button for overlap checking
-
+// DOM element selections
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
@@ -48,6 +42,7 @@ const enterButton = document.getElementById('enterBtn');
 const settingsToggle = document.getElementById('settings-toggle');
 const settingsDrawer = document.getElementById('settings-drawer');
 const settingsClose = document.getElementById('settings-close');
+const resetPositionsBtn = document.getElementById('resetPositionsBtn');
 
 const heightValue = document.getElementById('heightValue');
 const arcValue = document.getElementById('arcValue');
@@ -155,7 +150,7 @@ function handleKeyDown(e) {
                 break;
         }
     }
-    
+
     const button = document.querySelector(`[data-key="${key}"]`);
     if (button) button.classList.add('active');
 }
@@ -206,9 +201,10 @@ function updateKeyHeights() {
     heightValue.textContent = heightSlider.value;
     dotButtons.forEach(btn => {
         btn.style.height = height;
-        btn.style.width = (parseInt(height) * 0.6) + 'px'; // Adjust the width to be a larger ratio of the height
+        btn.style.width = (parseInt(height) * 0.6) + 'px';
     });
     spaceButton.style.height = (parseInt(height) * 0.8) + 'px';
+    updateKeyStyles();
 }
 
 function updateKeyArc() {
@@ -230,18 +226,24 @@ function updateKeyArc() {
         }
         btn.style.transform = `translateY(-${offset}px) rotate(${rotate}deg)`;
     });
+    updateKeyStyles();
 }
 
 function updateKeyRotation() {
-    const rotationValue = parseInt(rotationSlider.value);
     rotationValue.textContent = rotationSlider.value;
-    updateKeyArc(); // This ensures the rotation is maintained when the arc is updated
+    updateKeyArc();
 }
 
 function recordKeyPress(key, e) {
     const rect = e.target.getBoundingClientRect();
-    const press = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const press = {
+        x: e.clientX - rect.left - rect.width / 2,
+        y: e.clientY - rect.top - rect.height / 2
+    };
     keyPositions[key].presses.push(press);
+    if (keyPositions[key].presses.length > 10) {
+        keyPositions[key].presses.shift();
+    }
     adjustKeyPositions();
 }
 
@@ -252,38 +254,35 @@ function adjustKeyPositions() {
             const avgX = positions.reduce((sum, pos) => sum + pos.x, 0) / positions.length;
             const avgY = positions.reduce((sum, pos) => sum + pos.y, 0) / positions.length;
 
-            let newX = keyPositions[key].x + (avgX - keyPositions[key].x) * ADAPTATION_SPEED;
-            let newY = keyPositions[key].y + (avgY - keyPositions[key].y) * ADAPTATION_SPEED;
+            if (Math.abs(avgX) > ATTRACTION_THRESHOLD || Math.abs(avgY) > ATTRACTION_THRESHOLD) {
+                let newX = keyPositions[key].x + (avgX - keyPositions[key].x) * ADAPTATION_SPEED;
+                let newY = keyPositions[key].y + (avgY - keyPositions[key].y) * ADAPTATION_SPEED;
 
-            // Constrain movement within the maximum allowed range
-            newX = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newX));
-            newY = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newY));
+                newX = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newX));
+                newY = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newY));
 
-            // Ensure no overlap
-            const currentKeyIndex = Object.keys(keyPositions).indexOf(key);
-            const currentButton = dotButtons[currentKeyIndex];
-            let overlap = false;
-
-            dotButtons.forEach((otherButton, index) => {
-                if (otherButton !== currentButton) {
-                    const otherKey = otherButton.getAttribute('data-key');
-                    const otherPosition = keyPositions[otherKey];
-                    const dx = newX - otherPosition.x;
-                    const dy = newY - otherPosition.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < BUTTON_RADIUS * 2) {
-                        overlap = true;
-                    }
+                if (!checkOverlap(key, newX, newY)) {
+                    keyPositions[key].x = newX;
+                    keyPositions[key].y = newY;
                 }
-            });
-
-            if (!overlap) {
-                keyPositions[key].x = newX;
-                keyPositions[key].y = newY;
             }
         }
     });
     updateKeyStyles();
+}
+
+function checkOverlap(currentKey, newX, newY) {
+    for (const key in keyPositions) {
+        if (key !== currentKey) {
+            const dx = newX - keyPositions[key].x;
+            const dy = newY - keyPositions[key].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < BUTTON_RADIUS * 2) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function updateKeyStyles() {
@@ -291,21 +290,28 @@ function updateKeyStyles() {
         const key = btn.getAttribute('data-key');
         if (keyPositions[key]) {
             const { x, y } = keyPositions[key];
-            const existingTransforms = btn.style.transform.split(' ').filter(t => !t.startsWith('translate('));
-            existingTransforms.push(`translate(${x}px, ${y}px)`);
-            btn.style.transform = existingTransforms.join(' ');
+            const existingTransform = btn.style.transform || '';
+            const newTransform = `translate(${x}px, ${y}px)`;
+
+            const updatedTransform = existingTransform
+                .split(' ')
+                .filter(t => !t.startsWith('translate('))
+                .concat(newTransform)
+                .join(' ');
+
+            btn.style.transform = updatedTransform;
         }
     });
 }
 
-settingsToggle.addEventListener('click', () => {
-    settingsDrawer.classList.toggle('open');
-});
+function resetKeyPositions() {
+    Object.keys(keyPositions).forEach(key => {
+        keyPositions[key] = { x: 0, y: 0, presses: [] };
+    });
+    updateKeyStyles();
+}
 
-settingsClose.addEventListener('click', () => {
-    settingsDrawer.classList.remove('open');
-});
-
+// Event Listeners
 document.addEventListener('keydown', handleKeyDown);
 document.addEventListener('keyup', handleKeyUp);
 allClearBtn.addEventListener('click', () => {
@@ -318,6 +324,7 @@ fullScreenBtn.addEventListener('click', toggleFullscreen);
 heightSlider.addEventListener('input', updateKeyHeights);
 arcSlider.addEventListener('input', updateKeyArc);
 rotationSlider.addEventListener('input', updateKeyRotation);
+resetPositionsBtn.addEventListener('click', resetKeyPositions);
 
 upButton.addEventListener('click', () => moveCursor(-1, 0));
 downButton.addEventListener('click', () => moveCursor(1, 0));
@@ -325,6 +332,14 @@ leftButton.addEventListener('click', () => moveCursor(0, -1));
 rightButton.addEventListener('click', () => moveCursor(0, 1));
 backspaceButton.addEventListener('click', handleBackspace);
 enterButton.addEventListener('click', handleEnter);
+
+settingsToggle.addEventListener('click', () => {
+    settingsDrawer.classList.toggle('open');
+});
+
+settingsClose.addEventListener('click', () => {
+    settingsDrawer.classList.remove('open');
+});
 
 // Touch and mouse event listeners for dot keys
 dotButtons.forEach(btn => {
@@ -334,7 +349,7 @@ dotButtons.forEach(btn => {
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
-            recordKeyPress(key, e);
+            recordKeyPress(key, e.touches[0]);
             updateGrid();
             btn.classList.add('active');
         }
@@ -400,7 +415,7 @@ spaceButton.addEventListener('mouseup', e => {
     spaceButton.classList.remove('active');
 });
 
-// Initial setting of key heights, arc, and rotation
+// Initial function calls
 updateKeyHeights();
 updateKeyArc();
 updateKeyRotation();
