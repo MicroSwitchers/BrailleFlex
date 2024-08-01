@@ -2,7 +2,7 @@ const ROWS = 20;
 const COLS = 25;
 const EMPTY_CELL = [0, 0, 0, 0, 0, 0];
 const KEY_MAP = { f: 0, d: 1, s: 2, j: 3, k: 4, l: 5 };
-const LEARNING_RATE = 0.2;
+const LEARNING_RATE = 0.05;
 const GRAVITY_RADIUS = 50; // Radius in pixels within which a button "attracts" presses
 
 let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
@@ -12,12 +12,12 @@ let activeKeys = new Set();
 let isFullscreen = false;
 
 let keyPositions = {
-    s: { x: 0, y: 0, count: 0 },
-    d: { x: 0, y: 0, count: 0 },
-    f: { x: 0, y: 0, count: 0 },
-    j: { x: 0, y: 0, count: 0 },
-    k: { x: 0, y: 0, count: 0 },
-    l: { x: 0, y: 0, count: 0 },
+    s: { x: 0, y: 0 },
+    d: { x: 0, y: 0 },
+    f: { x: 0, y: 0 },
+    j: { x: 0, y: 0 },
+    k: { x: 0, y: 0 },
+    l: { x: 0, y: 0 },
 };
 
 const brailleGrid = document.getElementById('braille-grid');
@@ -217,10 +217,9 @@ function updateKeyArc() {
         } else if (key === 'j' || key === 'k' || key === 'l') {
             rotate = -rotationValue;
         }
-        const currentTransform = new DOMMatrix(window.getComputedStyle(btn).transform);
-        const currentX = currentTransform.m41;
-        const currentY = currentTransform.m42;
-        btn.style.transform = `translate(${currentX}px, ${currentY - offset}px) rotate(${rotate}deg)`;
+        const xOffset = keyPositions[key].x;
+        const yOffset = keyPositions[key].y - offset;
+        btn.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotate}deg)`;
     });
 }
 
@@ -231,33 +230,9 @@ function updateKeyRotation() {
 
 function recordKeyPress(key, x, y) {
     const keyPos = keyPositions[key];
-    keyPos.count++;
-    
-    keyPos.x += (x - keyPos.x) / keyPos.count;
-    keyPos.y += (y - keyPos.y) / keyPos.count;
-    
-    adjustKeyPosition(key);
-}
-
-function adjustKeyPosition(key) {
-    const keyPos = keyPositions[key];
-    const button = document.querySelector(`[data-key="${key}"]`);
-    if (button) {
-        const currentTransform = new DOMMatrix(window.getComputedStyle(button).transform);
-        const currentX = currentTransform.m41;
-        const currentY = currentTransform.m42;
-        
-        const newX = currentX + (keyPos.x - currentX) * LEARNING_RATE;
-        const newY = currentY + (keyPos.y - currentY) * LEARNING_RATE;
-        
-        updateKeyStyle(button, newX, newY);
-    }
-}
-
-function updateKeyStyle(button, x, y) {
-    const currentTransform = new DOMMatrix(window.getComputedStyle(button).transform);
-    const rotate = Math.atan2(currentTransform.b, currentTransform.a) * (180 / Math.PI);
-    button.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
+    keyPos.x += (x - keyPos.x) * LEARNING_RATE;
+    keyPos.y += (y - keyPos.y) * LEARNING_RATE;
+    updateKeyArc();
 }
 
 function findClosestButton(x, y) {
