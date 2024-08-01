@@ -282,47 +282,52 @@ rightButton.addEventListener('click', () => moveCursor(0, 1));
 backspaceButton.addEventListener('click', handleBackspace);
 enterButton.addEventListener('click', handleEnter);
 
-dotButtons.forEach(btn => {
-    const handlePress = (e) => {
-        e.preventDefault();
-        const x = e.clientX || e.touches[0].clientX;
-        const y = e.clientY || e.touches[0].clientY;
-        const closestBtn = findClosestButton(x, y);
+let touchStartPositions = {};
 
-        if (closestBtn) {
-            const key = closestBtn.getAttribute('data-key');
-            if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
-                activeKeys.add(key);
-                currentCell[KEY_MAP[key]] = 1;
-                const rect = closestBtn.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                recordKeyPress(key, x - centerX, y - centerY);
-                updateGrid();
-                closestBtn.classList.add('active');
+dotButtons.forEach(btn => {
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+            activeKeys.add(key);
+            currentCell[KEY_MAP[key]] = 1;
+            const touch = e.touches[0];
+            touchStartPositions[key] = { x: touch.clientX, y: touch.clientY };
+            btn.classList.add('active');
+            updateGrid();
+        }
+    }, { passive: false });
+
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key)) {
+            activeKeys.delete(key);
+            delete touchStartPositions[key];
+            btn.classList.remove('active');
+            if (activeKeys.size === 0) {
+                moveCursor(0, 1);
             }
         }
-    };
-
-    btn.addEventListener('touchstart', handlePress, { passive: false });
-    btn.addEventListener('mousedown', handlePress);
+    }, { passive: false });
 });
 
-document.addEventListener('mouseup', (e) => {
-    if (activeKeys.size > 0) {
-        activeKeys.clear();
-        moveCursor(0, 1);
-        dotButtons.forEach(btn => btn.classList.remove('active'));
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (let i = 0; i < e.touches.length; i++) {
+        const touch = e.touches[i];
+        const closestBtn = findClosestButton(touch.clientX, touch.clientY);
+        if (closestBtn) {
+            const key = closestBtn.getAttribute('data-key');
+            if (touchStartPositions[key]) {
+                const startPos = touchStartPositions[key];
+                const dx = touch.clientX - startPos.x;
+                const dy = touch.clientY - startPos.y;
+                recordKeyPress(key, dx, dy);
+            }
+        }
     }
-});
-
-document.addEventListener('touchend', (e) => {
-    if (activeKeys.size > 0) {
-        activeKeys.clear();
-        moveCursor(0, 1);
-        dotButtons.forEach(btn => btn.classList.remove('active'));
-    }
-});
+}, { passive: false });
 
 spaceButton.addEventListener('touchstart', e => {
     e.preventDefault();
