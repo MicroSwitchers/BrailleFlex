@@ -295,8 +295,10 @@ dotButtons.forEach(btn => {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
             const rect = btn.getBoundingClientRect();
-            const x = (e.clientX || e.touches[0].clientX) - rect.left - rect.width / 2;
-            const y = (e.clientY || e.touches[0].clientY) - rect.top - rect.height / 2;
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const x = (e.clientX || e.touches[0].clientX) - centerX;
+            const y = (e.clientY || e.touches[0].clientY) - centerY;
             recordKeyPress(key, x, y);
             updateGrid();
             btn.classList.add('active');
