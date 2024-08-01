@@ -3,6 +3,7 @@ const COLS = 25;
 const EMPTY_CELL = [0, 0, 0, 0, 0, 0];
 const KEY_MAP = { f: 0, d: 1, s: 2, j: 3, k: 4, l: 5 };
 const LEARNING_RATE = 0.2;
+const GRAVITY_RADIUS = 50; // Radius in pixels within which a button "attracts" presses
 
 let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
 let cursor = { row: 0, col: 0 };
@@ -259,6 +260,25 @@ function updateKeyStyle(button, x, y) {
     button.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
 }
 
+function findClosestButton(x, y) {
+    let closestButton = null;
+    let closestDistance = Infinity;
+
+    dotButtons.forEach(btn => {
+        const rect = btn.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const distance = Math.sqrt((x - centerX)**2 + (y - centerY)**2);
+
+        if (distance < closestDistance && distance <= GRAVITY_RADIUS) {
+            closestDistance = distance;
+            closestButton = btn;
+        }
+    });
+
+    return closestButton;
+}
+
 settingsToggle.addEventListener('click', () => {
     settingsDrawer.classList.toggle('open');
 });
@@ -290,38 +310,43 @@ enterButton.addEventListener('click', handleEnter);
 dotButtons.forEach(btn => {
     const handlePress = (e) => {
         e.preventDefault();
-        const key = btn.getAttribute('data-key');
-        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
-            activeKeys.add(key);
-            currentCell[KEY_MAP[key]] = 1;
-            const rect = btn.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const x = (e.clientX || e.touches[0].clientX) - centerX;
-            const y = (e.clientY || e.touches[0].clientY) - centerY;
-            recordKeyPress(key, x, y);
-            updateGrid();
-            btn.classList.add('active');
+        const x = e.clientX || e.touches[0].clientX;
+        const y = e.clientY || e.touches[0].clientY;
+        const closestBtn = findClosestButton(x, y);
+
+        if (closestBtn) {
+            const key = closestBtn.getAttribute('data-key');
+            if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+                activeKeys.add(key);
+                currentCell[KEY_MAP[key]] = 1;
+                const rect = closestBtn.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                recordKeyPress(key, x - centerX, y - centerY);
+                updateGrid();
+                closestBtn.classList.add('active');
+            }
         }
     };
 
     btn.addEventListener('touchstart', handlePress, { passive: false });
     btn.addEventListener('mousedown', handlePress);
+});
 
-    const handleRelease = (e) => {
-        e.preventDefault();
-        const key = btn.getAttribute('data-key');
-        if (KEY_MAP.hasOwnProperty(key)) {
-            activeKeys.delete(key);
-            if (activeKeys.size === 0) {
-                moveCursor(0, 1);
-            }
-            btn.classList.remove('active');
-        }
-    };
+document.addEventListener('mouseup', (e) => {
+    if (activeKeys.size > 0) {
+        activeKeys.clear();
+        moveCursor(0, 1);
+        dotButtons.forEach(btn => btn.classList.remove('active'));
+    }
+});
 
-    btn.addEventListener('touchend', handleRelease);
-    btn.addEventListener('mouseup', handleRelease);
+document.addEventListener('touchend', (e) => {
+    if (activeKeys.size > 0) {
+        activeKeys.clear();
+        moveCursor(0, 1);
+        dotButtons.forEach(btn => btn.classList.remove('active'));
+    }
 });
 
 spaceButton.addEventListener('touchstart', e => {
