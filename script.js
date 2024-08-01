@@ -2,8 +2,6 @@ const ROWS = 20;
 const COLS = 25;
 const EMPTY_CELL = [0, 0, 0, 0, 0, 0];
 const KEY_MAP = { f: 0, d: 1, s: 2, j: 3, k: 4, l: 5 };
-const LEARNING_RATE = 0.05;
-const GRAVITY_RADIUS = 50; // Radius in pixels within which a button "attracts" presses
 
 let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
 let cursor = { row: 0, col: 0 };
@@ -12,13 +10,16 @@ let activeKeys = new Set();
 let isFullscreen = false;
 
 let keyPositions = {
-    s: { x: 0, y: 0 },
-    d: { x: 0, y: 0 },
-    f: { x: 0, y: 0 },
-    j: { x: 0, y: 0 },
-    k: { x: 0, y: 0 },
-    l: { x: 0, y: 0 },
+    s: { x: 0, y: 0, presses: [] },
+    d: { x: 1, y: 0, presses: [] },
+    f: { x: 2, y: 0, presses: [] },
+    j: { x: 3, y: 0, presses: [] },
+    k: { x: 4, y: 0, presses: [] },
+    l: { x: 5, y: 0, presses: [] },
 };
+
+const MAX_MOVE = 50;  // Maximum allowed movement in any direction
+const ADAPTATION_SPEED = 0.05;  // Adaptation speed for smooth movement
 
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
@@ -195,7 +196,7 @@ function updateKeyHeights() {
     heightValue.textContent = heightSlider.value;
     dotButtons.forEach(btn => {
         btn.style.height = height;
-        btn.style.width = (parseInt(height) * 0.6) + 'px';
+        btn.style.width = (parseInt(height) * 0.6) + 'px'; // Adjust the width to be a larger ratio of the height
     });
     spaceButton.style.height = (parseInt(height) * 0.8) + 'px';
 }
@@ -217,41 +218,51 @@ function updateKeyArc() {
         } else if (key === 'j' || key === 'k' || key === 'l') {
             rotate = -rotationValue;
         }
-        const xOffset = keyPositions[key].x;
-        const yOffset = keyPositions[key].y - offset;
-        btn.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotate}deg)`;
+        btn.style.transform = `translateY(-${offset}px) rotate(${rotate}deg)`;
     });
 }
 
 function updateKeyRotation() {
+    const rotationValue = parseInt(rotationSlider.value);
     rotationValue.textContent = rotationSlider.value;
-    updateKeyArc();
+    updateKeyArc(); // This ensures the rotation is maintained when the arc is updated
 }
 
-function recordKeyPress(key, x, y) {
-    const keyPos = keyPositions[key];
-    keyPos.x += (x - keyPos.x) * LEARNING_RATE;
-    keyPos.y += (y - keyPos.y) * LEARNING_RATE;
-    updateKeyArc();
+function recordKeyPress(key, e) {
+    const rect = e.target.getBoundingClientRect();
+    const press = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    keyPositions[key].presses.push(press);
+    adjustKeyPositions();
 }
 
-function findClosestButton(x, y) {
-    let closestButton = null;
-    let closestDistance = Infinity;
+function adjustKeyPositions() {
+    Object.keys(keyPositions).forEach(key => {
+        const positions = keyPositions[key].presses;
+        if (positions.length > 0) {
+            const avgX = positions.reduce((sum, pos) => sum + pos.x, 0) / positions.length;
+            const avgY = positions.reduce((sum, pos) => sum + pos.y, 0) / positions.length;
 
-    dotButtons.forEach(btn => {
-        const rect = btn.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const distance = Math.sqrt((x - centerX)**2 + (y - centerY)**2);
+            keyPositions[key].x += (avgX - keyPositions[key].x) * ADAPTATION_SPEED;
+            keyPositions[key].y += (avgY - keyPositions[key].y) * ADAPTATION_SPEED;
 
-        if (distance < closestDistance && distance <= GRAVITY_RADIUS) {
-            closestDistance = distance;
-            closestButton = btn;
+            // Constrain movement within the maximum allowed range
+            keyPositions[key].x = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, keyPositions[key].x));
+            keyPositions[key].y = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, keyPositions[key].y));
         }
     });
+    updateKeyStyles();
+}
 
-    return closestButton;
+function updateKeyStyles() {
+    dotButtons.forEach(btn => {
+        const key = btn.getAttribute('data-key');
+        if (keyPositions[key]) {
+            const { x, y } = keyPositions[key];
+            const existingTransforms = btn.style.transform.split(' ').filter(t => !t.startsWith('translate('));
+            existingTransforms.push(`translate(${x}px, ${y}px)`);
+            btn.style.transform = existingTransforms.join(' ');
+        }
+    });
 }
 
 settingsToggle.addEventListener('click', () => {
@@ -282,53 +293,58 @@ rightButton.addEventListener('click', () => moveCursor(0, 1));
 backspaceButton.addEventListener('click', handleBackspace);
 enterButton.addEventListener('click', handleEnter);
 
-let touchStartPositions = {};
-
+// Touch and mouse event listeners for dot keys
 dotButtons.forEach(btn => {
-    btn.addEventListener('touchstart', (e) => {
+    btn.addEventListener('touchstart', e => {
         e.preventDefault();
         const key = btn.getAttribute('data-key');
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
-            const touch = e.touches[0];
-            touchStartPositions[key] = { x: touch.clientX, y: touch.clientY };
-            btn.classList.add('active');
+            recordKeyPress(key, e);
             updateGrid();
+            btn.classList.add('active');
         }
-    }, { passive: false });
+    });
 
-    btn.addEventListener('touchend', (e) => {
+    btn.addEventListener('touchend', e => {
         e.preventDefault();
         const key = btn.getAttribute('data-key');
         if (KEY_MAP.hasOwnProperty(key)) {
             activeKeys.delete(key);
-            delete touchStartPositions[key];
-            btn.classList.remove('active');
             if (activeKeys.size === 0) {
                 moveCursor(0, 1);
             }
+            btn.classList.remove('active');
         }
-    }, { passive: false });
+    });
+
+    btn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+            activeKeys.add(key);
+            currentCell[KEY_MAP[key]] = 1;
+            recordKeyPress(key, e);
+            updateGrid();
+            btn.classList.add('active');
+        }
+    });
+
+    btn.addEventListener('mouseup', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key)) {
+            activeKeys.delete(key);
+            if (activeKeys.size === 0) {
+                moveCursor(0, 1);
+            }
+            btn.classList.remove('active');
+        }
+    });
 });
 
-document.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    for (let i = 0; i < e.touches.length; i++) {
-        const touch = e.touches[i];
-        const closestBtn = findClosestButton(touch.clientX, touch.clientY);
-        if (closestBtn) {
-            const key = closestBtn.getAttribute('data-key');
-            if (touchStartPositions[key]) {
-                const startPos = touchStartPositions[key];
-                const dx = touch.clientX - startPos.x;
-                const dy = touch.clientY - startPos.y;
-                recordKeyPress(key, dx, dy);
-            }
-        }
-    }
-}, { passive: false });
-
+// Touch and mouse event listeners for space button
 spaceButton.addEventListener('touchstart', e => {
     e.preventDefault();
     handleSpace();
@@ -351,6 +367,7 @@ spaceButton.addEventListener('mouseup', e => {
     spaceButton.classList.remove('active');
 });
 
+// Initial setting of key heights, arc, and rotation
 updateKeyHeights();
 updateKeyArc();
 updateKeyRotation();
