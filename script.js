@@ -11,11 +11,11 @@ let isFullscreen = false;
 
 let keyPositions = {
     s: { x: 0, y: 0, presses: [] },
-    d: { x: 1, y: 0, presses: [] },
-    f: { x: 2, y: 0, presses: [] },
-    j: { x: 3, y: 0, presses: [] },
-    k: { x: 4, y: 0, presses: [] },
-    l: { x: 5, y: 0, presses: [] },
+    d: { x: 0, y: 0, presses: [] },
+    f: { x: 0, y: 0, presses: [] },
+    j: { x: 0, y: 0, presses: [] },
+    k: { x: 0, y: 0, presses: [] },
+    l: { x: 0, y: 0, presses: [] },
 };
 
 const brailleGrid = document.getElementById('braille-grid');
@@ -227,7 +227,7 @@ function updateKeyRotation() {
 
 function recordKeyPress(key, e) {
     const rect = e.target.getBoundingClientRect();
-    const press = { x: e.clientX - rect.left - rect.width / 2, y: e.clientY - rect.top - rect.height / 2 };
+    const press = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     keyPositions[key].presses.push(press);
     adjustKeyPositions();
 }
@@ -250,11 +250,9 @@ function updateKeyStyles() {
         const key = btn.getAttribute('data-key');
         if (keyPositions[key]) {
             const { x, y } = keyPositions[key];
-            // Isolate the position transformation
-            let currentTransform = btn.style.transform;
-            currentTransform = currentTransform.replace(/translate\([^)]+\)/, '');
-            const newTransform = `translate(${x}px, ${y}px)`;
-            btn.style.transform = currentTransform + ' ' + newTransform;
+            const existingTransforms = btn.style.transform.split(' ').filter(t => !t.startsWith('translate('));
+            existingTransforms.push(`translate(${x}px, ${y}px)`);
+            btn.style.transform = existingTransforms.join(' ');
         }
     });
 }
@@ -295,7 +293,7 @@ dotButtons.forEach(btn => {
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
-            recordKeyPress(key, e);
+            recordKeyPress(key, e.touches[0]);
             updateGrid();
             btn.classList.add('active');
         }
