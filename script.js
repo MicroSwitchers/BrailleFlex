@@ -155,7 +155,7 @@ function handleKeyDown(e) {
                 break;
         }
     }
-    
+
     const button = document.querySelector(`[data-key="${key}"]`);
     if (button) button.classList.add('active');
 }
@@ -373,6 +373,14 @@ dotButtons.forEach(btn => {
                 moveCursor(0, 1);
             }
             btn.classList.remove('active');
+        }
+    });
+
+    btn.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        if (KEY_MAP.hasOwnProperty(key)) {
+            recordKeyPress(key, e);
         }
     });
 });
