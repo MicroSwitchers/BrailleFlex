@@ -256,9 +256,9 @@ function adjustKeyPosition(key) {
 }
 
 function constrainMovement(current, target, original) {
-    const distance = Math.sqrt(Math.pow(target - current, 2));
+    const distance = Math.sqrt(Math.pow(target - original, 2));
     if (distance > MAX_DISTANCE) {
-        const angle = Math.atan2(target - current, target - original);
+        const angle = Math.atan2(target - original, target - original);
         return original + MAX_DISTANCE * Math.cos(angle);
     }
     return current + (target - current) * LEARNING_RATE;
