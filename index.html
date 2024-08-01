@@ -13,7 +13,6 @@
             <div class="header-buttons">
                 <button id="allClearBtn" class="small-button">Clear</button>
                 <button id="fullScreenBtn" class="small-button">Full</button>
-                <button id="resetPositionsBtn" class="small-button">Reset Positions</button>
                 <button id="settings-toggle" class="small-button">Settings</button>
             </div>
         </div>
@@ -24,44 +23,43 @@
             <div class="compact-buttons">
                 <button id="upBtn" class="nav-button">↑</button>
                 <button id="leftBtn" class="nav-button">←</button>
-                <button id="rightButton" class="nav-button">→</button>
+                <button id="rightBtn" class="nav-button">→</button>
                 <button id="downBtn" class="nav-button">↓</button>
-                <button id="backspaceBtn" class="nav-button">⌫</button>
-                <button id="enterBtn" class="nav-button">⏎</button>
+                <button id="backspaceBtn" class="nav-button" data-key="backspace">⌫</button>
+                <button id="enterBtn" class="nav-button" data-key="enter">⏎</button>
             </div>
 
             <div class="key-container">
-                <button class="key dot-key" data-key="s">3 (s)</button>
-                <button class="key dot-key" data-key="d">2 (d)</button>
-                <button class="key dot-key" data-key="f">1 (f)</button>
-                <button id="spaceBtn" class="key space-key">Space</button>
-                <button class="key dot-key" data-key="j">4 (j)</button>
-                <button class="key dot-key" data-key="k">5 (k)</button>
-                <button class="key dot-key" data-key="l">6 (l)</button>
+                <button id="dot3Btn" class="key dot-key" data-key="s">3 (s)</button>
+                <button id="dot2Btn" class="key dot-key" data-key="d">2 (d)</button>
+                <button id="dot1Btn" class="key dot-key" data-key="f">1 (f)</button>
+                <button id="spaceBtn" class="key space-key" data-key="space">Space</button>
+                <button id="dot4Btn" class="key dot-key" data-key="j">4 (j)</button>
+                <button id="dot5Btn" class="key dot-key" data-key="k">5 (k)</button>
+                <button id="dot6Btn" class="key dot-key" data-key="l">6 (l)</button>
             </div>
         </div>
     </div>
 
     <div id="settings-drawer" class="settings-drawer">
+        <button id="settings-close" class="settings-close">X</button>
         <div class="settings-content">
-            <button id="settings-close" class="settings-close">Close</button>
-
+            <h3 class="settings-title">Settings</h3>
             <div class="slider-container">
-                <label for="heightSlider">Key Height</label>
-                <input type="range" id="heightSlider" min="50" max="150" value="100">
-                <span id="heightValue">100</span>
-            </div>
+                <div class="slider-section">
+                    <label for="heightSlider">Key Height: <span id="heightValue">140</span> px</label>
+                    <input type="range" id="heightSlider" min="90" max="190" step="10" value="140">
+                </div>
 
-            <div class="slider-container">
-                <label for="arcSlider">Key Arc</label>
-                <input type="range" id="arcSlider" min="0" max="50" value="25">
-                <span id="arcValue">25</span>
-            </div>
+                <div class="slider-section">
+                    <label for="arcSlider">Key Arc: <span id="arcValue">40</span> px</label>
+                    <input type="range" id="arcSlider" min="0" max="80" step="5" value="40">
+                </div>
 
-            <div class="slider-container">
-                <label for="rotationSlider">Key Rotation</label>
-                <input type="range" id="rotationSlider" min="0" max="30" value="15">
-                <span id="rotationValue">15</span>
+                <div class="slider-section">
+                    <label for="rotationSlider">Key Rotation: <span id="rotationValue">15</span>°</label>
+                    <input type="range" id="rotationSlider" min="0" max="30" step="5" value="15">
+                </div>
             </div>
         </div>
     </div>

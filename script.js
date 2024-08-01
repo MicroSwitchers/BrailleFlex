@@ -1,13 +1,8 @@
 const ROWS = 20;
-const COLS = 43;
+const COLS = 25;
 const EMPTY_CELL = [0, 0, 0, 0, 0, 0];
 const KEY_MAP = { f: 0, d: 1, s: 2, j: 3, k: 4, l: 5 };
-
-// Constants for adaptation
-const ADAPTATION_SPEED = 0.05;
-const MAX_MOVE = 50;
-const BUTTON_RADIUS = 35;
-const ATTRACTION_THRESHOLD = 20;
+const LEARNING_RATE = 0.2;
 
 let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
 let cursor = { row: 0, col: 0 };
@@ -16,15 +11,14 @@ let activeKeys = new Set();
 let isFullscreen = false;
 
 let keyPositions = {
-    s: { x: 0, y: 0, presses: [] },
-    d: { x: 0, y: 0, presses: [] },
-    f: { x: 0, y: 0, presses: [] },
-    j: { x: 0, y: 0, presses: [] },
-    k: { x: 0, y: 0, presses: [] },
-    l: { x: 0, y: 0, presses: [] },
+    s: { x: 0, y: 0, count: 0 },
+    d: { x: 0, y: 0, count: 0 },
+    f: { x: 0, y: 0, count: 0 },
+    j: { x: 0, y: 0, count: 0 },
+    k: { x: 0, y: 0, count: 0 },
+    l: { x: 0, y: 0, count: 0 },
 };
 
-// DOM element selections
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
 const fullScreenBtn = document.getElementById('fullScreenBtn');
@@ -42,7 +36,6 @@ const enterButton = document.getElementById('enterBtn');
 const settingsToggle = document.getElementById('settings-toggle');
 const settingsDrawer = document.getElementById('settings-drawer');
 const settingsClose = document.getElementById('settings-close');
-const resetPositionsBtn = document.getElementById('resetPositionsBtn');
 
 const heightValue = document.getElementById('heightValue');
 const arcValue = document.getElementById('arcValue');
@@ -150,7 +143,7 @@ function handleKeyDown(e) {
                 break;
         }
     }
-
+    
     const button = document.querySelector(`[data-key="${key}"]`);
     if (button) button.classList.add('active');
 }
@@ -204,7 +197,6 @@ function updateKeyHeights() {
         btn.style.width = (parseInt(height) * 0.6) + 'px';
     });
     spaceButton.style.height = (parseInt(height) * 0.8) + 'px';
-    updateKeyStyles();
 }
 
 function updateKeyArc() {
@@ -224,9 +216,11 @@ function updateKeyArc() {
         } else if (key === 'j' || key === 'k' || key === 'l') {
             rotate = -rotationValue;
         }
-        btn.style.transform = `translateY(-${offset}px) rotate(${rotate}deg)`;
+        const currentTransform = new DOMMatrix(window.getComputedStyle(btn).transform);
+        const currentX = currentTransform.m41;
+        const currentY = currentTransform.m42;
+        btn.style.transform = `translate(${currentX}px, ${currentY - offset}px) rotate(${rotate}deg)`;
     });
-    updateKeyStyles();
 }
 
 function updateKeyRotation() {
@@ -234,84 +228,45 @@ function updateKeyRotation() {
     updateKeyArc();
 }
 
-function recordKeyPress(key, e) {
-    const rect = e.target.getBoundingClientRect();
-    const press = {
-        x: e.clientX - rect.left - rect.width / 2,
-        y: e.clientY - rect.top - rect.height / 2
-    };
-    keyPositions[key].presses.push(press);
-    if (keyPositions[key].presses.length > 10) {
-        keyPositions[key].presses.shift();
+function recordKeyPress(key, x, y) {
+    const keyPos = keyPositions[key];
+    keyPos.count++;
+    
+    keyPos.x += (x - keyPos.x) / keyPos.count;
+    keyPos.y += (y - keyPos.y) / keyPos.count;
+    
+    adjustKeyPosition(key);
+}
+
+function adjustKeyPosition(key) {
+    const keyPos = keyPositions[key];
+    const button = document.querySelector(`[data-key="${key}"]`);
+    if (button) {
+        const currentTransform = new DOMMatrix(window.getComputedStyle(button).transform);
+        const currentX = currentTransform.m41;
+        const currentY = currentTransform.m42;
+        
+        const newX = currentX + (keyPos.x - currentX) * LEARNING_RATE;
+        const newY = currentY + (keyPos.y - currentY) * LEARNING_RATE;
+        
+        updateKeyStyle(button, newX, newY);
     }
-    adjustKeyPositions();
 }
 
-function adjustKeyPositions() {
-    Object.keys(keyPositions).forEach(key => {
-        const positions = keyPositions[key].presses;
-        if (positions.length > 0) {
-            const avgX = positions.reduce((sum, pos) => sum + pos.x, 0) / positions.length;
-            const avgY = positions.reduce((sum, pos) => sum + pos.y, 0) / positions.length;
-
-            if (Math.abs(avgX) > ATTRACTION_THRESHOLD || Math.abs(avgY) > ATTRACTION_THRESHOLD) {
-                let newX = keyPositions[key].x + (avgX - keyPositions[key].x) * ADAPTATION_SPEED;
-                let newY = keyPositions[key].y + (avgY - keyPositions[key].y) * ADAPTATION_SPEED;
-
-                newX = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newX));
-                newY = Math.max(-MAX_MOVE, Math.min(MAX_MOVE, newY));
-
-                if (!checkOverlap(key, newX, newY)) {
-                    keyPositions[key].x = newX;
-                    keyPositions[key].y = newY;
-                }
-            }
-        }
-    });
-    updateKeyStyles();
+function updateKeyStyle(button, x, y) {
+    const currentTransform = new DOMMatrix(window.getComputedStyle(button).transform);
+    const rotate = Math.atan2(currentTransform.b, currentTransform.a) * (180 / Math.PI);
+    button.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
 }
 
-function checkOverlap(currentKey, newX, newY) {
-    for (const key in keyPositions) {
-        if (key !== currentKey) {
-            const dx = newX - keyPositions[key].x;
-            const dy = newY - keyPositions[key].y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < BUTTON_RADIUS * 2) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
+settingsToggle.addEventListener('click', () => {
+    settingsDrawer.classList.toggle('open');
+});
 
-function updateKeyStyles() {
-    dotButtons.forEach(btn => {
-        const key = btn.getAttribute('data-key');
-        if (keyPositions[key]) {
-            const { x, y } = keyPositions[key];
-            const existingTransform = btn.style.transform || '';
-            const newTransform = `translate(${x}px, ${y}px)`;
+settingsClose.addEventListener('click', () => {
+    settingsDrawer.classList.remove('open');
+});
 
-            const updatedTransform = existingTransform
-                .split(' ')
-                .filter(t => !t.startsWith('translate('))
-                .concat(newTransform)
-                .join(' ');
-
-            btn.style.transform = updatedTransform;
-        }
-    });
-}
-
-function resetKeyPositions() {
-    Object.keys(keyPositions).forEach(key => {
-        keyPositions[key] = { x: 0, y: 0, presses: [] };
-    });
-    updateKeyStyles();
-}
-
-// Event Listeners
 document.addEventListener('keydown', handleKeyDown);
 document.addEventListener('keyup', handleKeyUp);
 allClearBtn.addEventListener('click', () => {
@@ -324,7 +279,6 @@ fullScreenBtn.addEventListener('click', toggleFullscreen);
 heightSlider.addEventListener('input', updateKeyHeights);
 arcSlider.addEventListener('input', updateKeyArc);
 rotationSlider.addEventListener('input', updateKeyRotation);
-resetPositionsBtn.addEventListener('click', resetKeyPositions);
 
 upButton.addEventListener('click', () => moveCursor(-1, 0));
 downButton.addEventListener('click', () => moveCursor(1, 0));
@@ -333,29 +287,26 @@ rightButton.addEventListener('click', () => moveCursor(0, 1));
 backspaceButton.addEventListener('click', handleBackspace);
 enterButton.addEventListener('click', handleEnter);
 
-settingsToggle.addEventListener('click', () => {
-    settingsDrawer.classList.toggle('open');
-});
-
-settingsClose.addEventListener('click', () => {
-    settingsDrawer.classList.remove('open');
-});
-
-// Touch and mouse event listeners for dot keys
 dotButtons.forEach(btn => {
-    btn.addEventListener('touchstart', e => {
+    const handlePress = (e) => {
         e.preventDefault();
         const key = btn.getAttribute('data-key');
         if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
             activeKeys.add(key);
             currentCell[KEY_MAP[key]] = 1;
-            recordKeyPress(key, e.touches[0]);
+            const rect = btn.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left - rect.width / 2;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top - rect.height / 2;
+            recordKeyPress(key, x, y);
             updateGrid();
             btn.classList.add('active');
         }
-    });
+    };
 
-    btn.addEventListener('touchend', e => {
+    btn.addEventListener('touchstart', handlePress, { passive: false });
+    btn.addEventListener('mousedown', handlePress);
+
+    const handleRelease = (e) => {
         e.preventDefault();
         const key = btn.getAttribute('data-key');
         if (KEY_MAP.hasOwnProperty(key)) {
@@ -365,34 +316,12 @@ dotButtons.forEach(btn => {
             }
             btn.classList.remove('active');
         }
-    });
+    };
 
-    btn.addEventListener('mousedown', e => {
-        e.preventDefault();
-        const key = btn.getAttribute('data-key');
-        if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
-            activeKeys.add(key);
-            currentCell[KEY_MAP[key]] = 1;
-            recordKeyPress(key, e);
-            updateGrid();
-            btn.classList.add('active');
-        }
-    });
-
-    btn.addEventListener('mouseup', e => {
-        e.preventDefault();
-        const key = btn.getAttribute('data-key');
-        if (KEY_MAP.hasOwnProperty(key)) {
-            activeKeys.delete(key);
-            if (activeKeys.size === 0) {
-                moveCursor(0, 1);
-            }
-            btn.classList.remove('active');
-        }
-    });
+    btn.addEventListener('touchend', handleRelease);
+    btn.addEventListener('mouseup', handleRelease);
 });
 
-// Touch and mouse event listeners for space button
 spaceButton.addEventListener('touchstart', e => {
     e.preventDefault();
     handleSpace();
@@ -415,7 +344,6 @@ spaceButton.addEventListener('mouseup', e => {
     spaceButton.classList.remove('active');
 });
 
-// Initial function calls
 updateKeyHeights();
 updateKeyArc();
 updateKeyRotation();
