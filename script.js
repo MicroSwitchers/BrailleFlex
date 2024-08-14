@@ -2,8 +2,7 @@ const ROWS = 20;
 const COLS = 25;
 const EMPTY_CELL = [0, 0, 0, 0, 0, 0];
 const KEY_MAP = { f: 0, d: 1, s: 2, j: 3, k: 4, l: 5 };
-const LEARNING_RATE = 0.03;
-const MAX_DISTANCE = 30; // Maximum distance a key can move from its original position
+const LEARNING_RATE = 0.2;
 
 let grid = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => [...EMPTY_CELL]));
 let cursor = { row: 0, col: 0 };
@@ -243,30 +242,15 @@ function adjustKeyPosition(key) {
     const keyPos = keyPositions[key];
     const button = document.querySelector(`[data-key="${key}"]`);
     if (button) {
-        const originalPosition = getOriginalPosition(button);
         const currentTransform = new DOMMatrix(window.getComputedStyle(button).transform);
         const currentX = currentTransform.m41;
         const currentY = currentTransform.m42;
         
-        const newX = constrainMovement(currentX, keyPos.x, originalPosition.x);
-        const newY = constrainMovement(currentY, keyPos.y, originalPosition.y);
+        const newX = currentX + (keyPos.x - currentX) * LEARNING_RATE;
+        const newY = currentY + (keyPos.y - currentY) * LEARNING_RATE;
         
         updateKeyStyle(button, newX, newY);
     }
-}
-
-function constrainMovement(current, target, original) {
-    const distance = Math.sqrt(Math.pow(target - original, 2));
-    if (distance > MAX_DISTANCE) {
-        const angle = Math.atan2(target - original, target - original);
-        return original + MAX_DISTANCE * Math.cos(angle);
-    }
-    return current + (target - current) * LEARNING_RATE;
-}
-
-function getOriginalPosition(button) {
-    const rect = button.getBoundingClientRect();
-    return { x: rect.left, y: rect.top };
 }
 
 function updateKeyStyle(button, x, y) {
