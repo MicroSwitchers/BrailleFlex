@@ -374,8 +374,8 @@ body.high-contrast .dropdown-content {
     justify-content: center;
     align-items: center;
     position: relative;
-    /* Add adaptive touch zones */
-    --touch-zone-multiplier: 1.8;
+    /* Touch zones now match button size exactly */
+    --touch-zone-multiplier: 1.0;
 }
 
 /* Adaptive touch zones - invisible expanded hit areas */
@@ -392,12 +392,6 @@ body.high-contrast .dropdown-content {
     z-index: -1;
     /* Visual debug mode - uncomment to see touch zones */
     /* background: rgba(255, 0, 0, 0.1); border: 1px dashed red; */
-}
-
-/* Completely disable pointer events on individual buttons to prevent hit box conflicts */
-.key.dot-key,
-.key.space-key {
-    pointer-events: none;
 }
 
 .key.dot-key {
@@ -439,8 +433,8 @@ body.high-contrast .dropdown-content {
     font-size: 24px;
     margin: 0 10px;
     background: var(--accent-orange); /* Orange background for space key */
-    /* Enhanced touch for space bar */
-    --touch-zone-multiplier: 1.5;
+    /* Touch zone matches space button size exactly */
+    --touch-zone-multiplier: 1.0;
 }
 
 .key:hover {
@@ -815,8 +809,8 @@ body.high-contrast .dropdown-content {
     
     .key {
         min-height: 100px;
-        /* Larger touch zones for tablets */
-        --touch-zone-multiplier: 2.2;
+        /* Touch zones match button size exactly */
+        --touch-zone-multiplier: 1.0;
     }
     
     .key.dot-key {
@@ -853,8 +847,8 @@ body.high-contrast .dropdown-content {
         height: 120px;
         font-size: 22px;
         margin: 0 8px; /* Reduced margin */
-        /* Maximum touch sensitivity for tablets */
-        --touch-zone-multiplier: 2.5;
+        /* Touch zones match button size exactly */
+        --touch-zone-multiplier: 1.0;
     }
     
     .key.space-key {
@@ -891,7 +885,7 @@ body.high-contrast .dropdown-content {
         width: 110px;
         height: 130px;
         font-size: 24px;
-        --touch-zone-multiplier: 2.0;
+        --touch-zone-multiplier: 1.0;
     }
     
     .key.space-key {

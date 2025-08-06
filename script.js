@@ -684,38 +684,36 @@ function resetToDefaults() {
 
 // Enhanced Touch Detection System - Visual Element Detection
 function initializeTouchZones() {
-    console.log('Initializing visual-based touch zones...');
+    console.log('Initializing exact touch zones (no padding)...');
     
     dotButtons.forEach(btn => {
-        // For fallback zone detection, we still need approximate bounds
-        // but now we primarily use elementFromPoint for accuracy
+        // For fallback zone detection, use exact button bounds (no padding)
         const rect = btn.getBoundingClientRect();
         
-        // Create a basic zone for fallback fuzzy matching
-        const padding = 10; // Larger padding for fuzzy fallback
-        const basicZone = {
-            left: rect.left - padding,
-            right: rect.right + padding,
-            top: rect.top - padding,
-            bottom: rect.bottom + padding,
+        // Create exact zone matching visual button
+        const exactZone = {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
             button: btn,
             key: btn.getAttribute('data-key')
         };
-        touchZones.set(btn.getAttribute('data-key'), basicZone);
+        touchZones.set(btn.getAttribute('data-key'), exactZone);
         
-        console.log(`Basic zone for key ${btn.getAttribute('data-key')}:`, {
-            bounds: basicZone,
-            note: 'Primary detection uses elementFromPoint()'
+        console.log(`Exact zone for key ${btn.getAttribute('data-key')}:`, {
+            bounds: exactZone,
+            note: 'Primary detection uses elementFromPoint() for pixel-perfect accuracy'
         });
     });
     
-    // Add space button 
+    // Add space button (exact bounds)
     const spaceRect = spaceButton.getBoundingClientRect();
     const spaceZone = {
-        left: spaceRect.left - 10,
-        right: spaceRect.right + 10,
-        top: spaceRect.top - 10,
-        bottom: spaceRect.bottom + 10,
+        left: spaceRect.left,
+        right: spaceRect.right,
+        top: spaceRect.top,
+        bottom: spaceRect.bottom,
         button: spaceButton,
         key: 'space'
     };
@@ -740,13 +738,9 @@ function calculateArcOffset(key, arcValue) {
 
 // Find which key is being touched (using actual visual position)
 function findTouchedKey(x, y) {
-    let directHit = null;
-    let bestFuzzyMatch = null;
-    let closestDistance = Infinity;
+    console.log(`  🎯 Finding key for touch at (${x}, ${y}) - EXACT HIT DETECTION ONLY`);
     
-    console.log(`  🎯 Finding key for touch at (${x}, ${y})`);
-    
-    // First, try direct hit detection using elementFromPoint
+    // Use elementFromPoint for pixel-perfect visual detection
     const elementAtPoint = document.elementFromPoint(x, y);
     
     if (elementAtPoint) {
@@ -760,52 +754,29 @@ function findTouchedKey(x, y) {
         
         if (targetButton && (targetButton.classList.contains('dot-key') || targetButton.classList.contains('space-key'))) {
             const key = targetButton.getAttribute('data-key');
-            console.log(`  ✓ Direct visual hit on key ${key} using elementFromPoint`);
+            console.log(`  ✓ EXACT visual hit on key ${key} using elementFromPoint`);
             
             // Find the corresponding zone for this button
             const zone = touchZones.get(key);
             if (zone) {
-                return { key, zone, type: 'direct' };
+                return { key, zone, type: 'exact' };
             }
         }
     }
     
-    // Fallback to zone-based detection for fuzzy matching
+    // Fallback to exact zone boundary check (no fuzzy matching)
     for (const [key, zone] of touchZones) {
-        // Check if touch is within zone boundaries
+        // Check if touch is within EXACT zone boundaries (no padding, no fuzzy matching)
         if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
-            directHit = { key, zone, type: 'direct' };
-            console.log(`  ✓ Direct hit on key ${key} within zone`);
-            break; // Prioritize exact hits
+            console.log(`  ✓ EXACT hit on key ${key} within exact zone boundaries`);
+            return { key, zone, type: 'exact' };
         }
-        
-        // Calculate distance to zone center for fuzzy matching (fallback only)
-        const centerX = (zone.left + zone.right) / 2;
-        const centerY = (zone.top + zone.bottom) / 2;
-        const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-        
-        if (distance < closestDistance) {
-            closestDistance = distance;
-            bestFuzzyMatch = { key, zone, type: 'fuzzy', distance };
-        }
-        
-        // console.log(`    Key ${key}: distance: ${distance.toFixed(1)}`);
     }
     
-    // Return direct hit if found
-    if (directHit) {
-        return directHit;
-    }
-    
-    // Only use fuzzy match if no direct hit and within sensitivity-based distance
-    const maxFuzzyDistance = 30 * touchSensitivity; // Base 30px scaled by sensitivity
-    if (bestFuzzyMatch && bestFuzzyMatch.distance < maxFuzzyDistance) {
-        console.log(`  ⚠ Using fuzzy match for key ${bestFuzzyMatch.key} at distance ${bestFuzzyMatch.distance.toFixed(1)} (max: ${maxFuzzyDistance.toFixed(1)})`);
-        return bestFuzzyMatch;
-    }
-    
-    console.log(`  ✗ No key found for touch at (${x}, ${y})`);
+    // No fuzzy matching - if no exact hit, return null
+    console.log(`  ✗ No exact hit found - touch is outside all button areas`);
     return null;
+        console.log(`  ⚠ Using fuzzy match for key ${bestFuzzyMatch.key} at distance ${bestFuzzyMatch.distance.toFixed(1)} (max: ${maxFuzzyDistance.toFixed(1)})`);
 }
 
 // Enhanced touch feedback
@@ -813,17 +784,11 @@ function provideTouchFeedback(button, type) {
     button.classList.remove('touch-hover', 'near-press');
     
     switch (type) {
-        case 'direct':
+        case 'exact':
             button.classList.add('touch-hover');
             // Haptic feedback if available
             if ('vibrate' in navigator) {
                 navigator.vibrate(10);
-            }
-            break;
-        case 'fuzzy':
-            button.classList.add('near-press');
-            if ('vibrate' in navigator) {
-                navigator.vibrate(5);
             }
             break;
     }
@@ -1173,6 +1138,7 @@ const keyContainer = document.querySelector('.key-container');
 keyContainer.addEventListener('touchstart', (e) => {
     e.preventDefault();
     e.stopPropagation(); // Prevent event bubbling
+    e.stopImmediatePropagation(); // Stop all other listeners on this element
     
     // Initialize touch zones if not done
     if (touchZones.size === 0) {
@@ -1243,10 +1209,12 @@ keyContainer.addEventListener('touchstart', (e) => {
     console.log(`Active keys after: [${Array.from(activeKeys).join(', ')}], Total active touches: ${activeTouches.size}`);
     console.log(`Current cell state: [${currentCell.join(', ')}]`);
     console.log(`========================`);
-}, { passive: false });
+}, { passive: false, capture: true });
 
 keyContainer.addEventListener('touchend', (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation(); // Stop all other listeners
     clearTouchFeedback();
     
     // Handle each released touch
@@ -1274,10 +1242,12 @@ keyContainer.addEventListener('touchend', (e) => {
         isChordActive = false;
         setTimeout(() => moveCursor(0, 1), 100); // Small delay for chord completion
     }
-}, { passive: false });
+}, { passive: false, capture: true });
 
 keyContainer.addEventListener('touchcancel', (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation(); // Stop all other listeners
     clearTouchFeedback();
     
     // Handle cancelled touches
@@ -1305,12 +1275,13 @@ keyContainer.addEventListener('touchcancel', (e) => {
         isChordActive = false;
         setTimeout(() => moveCursor(0, 1), 100);
     }
-}, { passive: false });
+}, { passive: false, capture: true });
 
 // Add mouse hover handling to container for visual feedback
 keyContainer.addEventListener('mousemove', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation(); // Stop all other listeners
     
     // Clear any existing hover states
     document.querySelectorAll('.key').forEach(btn => {
@@ -1335,6 +1306,7 @@ keyContainer.addEventListener('mouseleave', (e) => {
 keyContainer.addEventListener('mousedown', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation(); // Stop all other listeners
     
     // Find the element under the mouse
     const targetElement = document.elementFromPoint(e.clientX, e.clientY);
