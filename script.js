@@ -1110,26 +1110,33 @@ const keyContainer = document.querySelector('.key-container');
 // Enhanced multi-touch handler for braille input
 keyContainer.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
     
     // Initialize touch zones if not done
     if (touchZones.size === 0) {
         initializeTouchZones();
     }
     
-    // Debug: Log multi-touch detection
-    if (e.changedTouches.length > 1) {
-        console.log(`Multi-touch detected: ${e.changedTouches.length} simultaneous touches`);
-    }
+    // Debug: Log all current touches with detailed info
+    console.log(`=== TOUCHSTART EVENT ===`);
+    console.log(`Total touches: ${e.touches.length}, New touches: ${e.changedTouches.length}`);
+    console.log(`Touch event type: ${e.type}, Target: ${e.target.tagName}.${e.target.className}`);
+    console.log(`All current touches:`, Array.from(e.touches).map(t => `ID:${t.identifier} at (${t.clientX},${t.clientY})`));
+    console.log(`Active keys before: [${Array.from(activeKeys).join(', ')}]`);
+    console.log(`Active touches before: ${activeTouches.size}`);
     
     // Handle each new touch
-    Array.from(e.changedTouches).forEach(touch => {
+    Array.from(e.changedTouches).forEach((touch, index) => {
+        console.log(`Processing touch ${index + 1}/${e.changedTouches.length}:`);
+        console.log(`  Touch ID: ${touch.identifier}, Position: (${touch.clientX}, ${touch.clientY})`);
+        
         const touchedKey = findTouchedKey(touch.clientX, touch.clientY);
         
         if (touchedKey && touchedKey.zone) {
             const key = touchedKey.key;
             const button = touchedKey.zone.button;
             
-            console.log(`Touch detected on key: ${key}`);
+            console.log(`  ✓ Touch detected on key: ${key}, Type: ${touchedKey.type}`);
             
             if (key === 'space') {
                 // Handle space button
@@ -1144,24 +1151,36 @@ keyContainer.addEventListener('touchstart', (e) => {
                 if ('vibrate' in navigator) {
                     navigator.vibrate(15);
                 }
-            } else if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
-                // Handle braille dot keys
-                activeKeys.add(key);
-                currentCell[KEY_MAP[key]] = 1;
-                isChordActive = true;
-                updateGrid();
-                button.classList.add('active');
-                
-                // Store touch info with unique touch ID
-                activeTouches.set(touch.identifier, { key, button });
-                
-                // Provide visual/haptic feedback
-                provideTouchFeedback(button, touchedKey.type);
-                
-                console.log(`Active keys: ${Array.from(activeKeys).join(', ')}`);
+                console.log(`  ✓ Space button activated`);
+            } else if (KEY_MAP.hasOwnProperty(key)) {
+                if (!activeKeys.has(key)) {
+                    // Handle braille dot keys
+                    activeKeys.add(key);
+                    currentCell[KEY_MAP[key]] = 1;
+                    isChordActive = true;
+                    updateGrid();
+                    button.classList.add('active');
+                    
+                    // Store touch info with unique touch ID
+                    activeTouches.set(touch.identifier, { key, button });
+                    
+                    // Provide visual/haptic feedback
+                    provideTouchFeedback(button, touchedKey.type);
+                    
+                    console.log(`  ✓ Braille key ${key} activated (dot ${KEY_MAP[key]})`);
+                } else {
+                    console.log(`  ⚠ Key ${key} already active, ignoring duplicate touch`);
+                }
             }
+        } else {
+            console.log(`  ✗ Touch at (${touch.clientX}, ${touch.clientY}) didn't hit any key`);
+            console.log(`  Available touch zones:`, Array.from(touchZones.keys()));
         }
     });
+    
+    console.log(`Active keys after: [${Array.from(activeKeys).join(', ')}], Total active touches: ${activeTouches.size}`);
+    console.log(`Current cell state: [${currentCell.join(', ')}]`);
+    console.log(`========================`);
 }, { passive: false });
 
 keyContainer.addEventListener('touchend', (e) => {

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <canvas id="canvas" width="512" height="512" style="border: 1px solid #ccc;"></canvas>
+    <br><br>
+    <button onclick="downloadIcon(192)">Download 192x192</button>
+    <button onclick="downloadIcon(512)">Download 512x512</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function drawIcon(size) {
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Blue background with rounded corners
+            ctx.fillStyle = '#2196f3';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw braille dots
+            ctx.fillStyle = 'white';
+            const dotSize = size * 0.08;
+            const spacing = size * 0.25;
+            const startX = size * 0.25;
+            const startY = size * 0.25;
+            
+            // 6-dot braille pattern (dots 1,2,3 on left, 4,5,6 on right)
+            const dots = [
+                {x: startX, y: startY}, // dot 1
+                {x: startX, y: startY + spacing}, // dot 2  
+                {x: startX, y: startY + spacing * 2}, // dot 3
+                {x: startX + spacing, y: startY}, // dot 4
+                {x: startX + spacing, y: startY + spacing}, // dot 5
+                {x: startX + spacing, y: startY + spacing * 2} // dot 6
+            ];
+            
+            dots.forEach(dot => {
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, dotSize, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+        
+        function downloadIcon(size) {
+            drawIcon(size);
+            
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Draw initial icon
+        drawIcon(512);
+    </script>
+</body>
+</html>

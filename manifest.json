@@ -13,40 +13,52 @@
   "categories": ["education", "accessibility", "productivity"],
   "icons": [
     {
-      "src": "brailleblue.svg",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232196f3' rx='15'/><circle cx='25' cy='20' r='6' fill='white'/><circle cx='75' cy='20' r='6' fill='white'/><circle cx='25' cy='40' r='6' fill='white'/><circle cx='75' cy='40' r='6' fill='white'/><circle cx='25' cy='60' r='6' fill='white'/><circle cx='75' cy='60' r='6' fill='white'/><text x='50' y='85' font-family='Arial' font-size='12' fill='white' text-anchor='middle' font-weight='bold'>BF</text></svg>",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232196f3' rx='15'/><circle cx='25' cy='20' r='6' fill='white'/><circle cx='75' cy='20' r='6' fill='white'/><circle cx='25' cy='40' r='6' fill='white'/><circle cx='75' cy='40' r='6' fill='white'/><circle cx='25' cy='60' r='6' fill='white'/><circle cx='75' cy='60' r='6' fill='white'/><text x='50' y='85' font-family='Arial' font-size='12' fill='white' text-anchor='middle' font-weight='bold'>BF</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232196f3' rx='15'/><circle cx='25' cy='20' r='6' fill='white'/><circle cx='75' cy='20' r='6' fill='white'/><circle cx='25' cy='40' r='6' fill='white'/><circle cx='75' cy='40' r='6' fill='white'/><circle cx='25' cy='60' r='6' fill='white'/><circle cx='75' cy='60' r='6' fill='white'/><text x='50' y='85' font-family='Arial' font-size='12' fill='white' text-anchor='middle' font-weight='bold'>BF</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml", 
+      "purpose": "any"
     },
     {
       "src": "brailleblue.svg",
       "sizes": "72x72",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "brailleblue.svg",
       "sizes": "96x96",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "brailleblue.svg",
       "sizes": "128x128",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "brailleblue.svg",
       "sizes": "144x144",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "brailleblue.svg",
       "sizes": "152x152",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "brailleblue.svg",
