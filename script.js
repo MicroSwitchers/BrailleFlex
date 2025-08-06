@@ -682,15 +682,18 @@ function resetToDefaults() {
     renderBrailleGrid();
 }
 
-// Enhanced Touch Detection System for Tablets
+// Enhanced Touch Detection System - Visual Element Detection
 function initializeTouchZones() {
+    console.log('Initializing visual-based touch zones...');
+    
     dotButtons.forEach(btn => {
+        // For fallback zone detection, we still need approximate bounds
+        // but now we primarily use elementFromPoint for accuracy
         const rect = btn.getBoundingClientRect();
         
-        // Use exact button boundaries to prevent overlap
-        // Only add minimal padding (2px) for edge cases
-        const padding = 2;
-        const exactZone = {
+        // Create a basic zone for fallback fuzzy matching
+        const padding = 10; // Larger padding for fuzzy fallback
+        const basicZone = {
             left: rect.left - padding,
             right: rect.right + padding,
             top: rect.top - padding,
@@ -698,40 +701,81 @@ function initializeTouchZones() {
             button: btn,
             key: btn.getAttribute('data-key')
         };
-        touchZones.set(btn.getAttribute('data-key'), exactZone);
+        touchZones.set(btn.getAttribute('data-key'), basicZone);
         
-        // Debug: Log the touch zone for verification  
-        // console.log(`Touch zone for key ${btn.getAttribute('data-key')}:`, exactZone);
+        console.log(`Basic zone for key ${btn.getAttribute('data-key')}:`, {
+            bounds: basicZone,
+            note: 'Primary detection uses elementFromPoint()'
+        });
     });
     
-    // Also add space button with minimal expansion
+    // Add space button 
     const spaceRect = spaceButton.getBoundingClientRect();
     const spaceZone = {
-        left: spaceRect.left - 5,
-        right: spaceRect.right + 5,
-        top: spaceRect.top - 5,
-        bottom: spaceRect.bottom + 5,
+        left: spaceRect.left - 10,
+        right: spaceRect.right + 10,
+        top: spaceRect.top - 10,
+        bottom: spaceRect.bottom + 10,
         button: spaceButton,
         key: 'space'
     };
     touchZones.set('space', spaceZone);
     
-    console.log(`Touch zones initialized for ${touchZones.size} buttons (exact boundaries)`);
+    console.log(`Touch zones initialized for ${touchZones.size} buttons (visual detection)`);
 }
 
-// Find which key is being touched (prioritize exact hits)
+// Calculate arc offset for a specific key
+function calculateArcOffset(key, arcValue) {
+    // Find the key index and calculate distance from center
+    const keyOrder = ['s', 'd', 'f', 'j', 'k', 'l'];
+    const index = keyOrder.indexOf(key);
+    if (index === -1) return 0;
+    
+    const totalKeys = keyOrder.length;
+    const midPoint = Math.floor(totalKeys / 2);
+    const distanceFromCenter = Math.abs(index - midPoint);
+    
+    return arcValue * distanceFromCenter * 4; // Step of 4px per unit
+}
+
+// Find which key is being touched (using actual visual position)
 function findTouchedKey(x, y) {
     let directHit = null;
     let bestFuzzyMatch = null;
     let closestDistance = Infinity;
     
-    // console.log(`  🎯 Finding key for touch at (${x}, ${y})`);
+    console.log(`  🎯 Finding key for touch at (${x}, ${y})`);
     
+    // First, try direct hit detection using elementFromPoint
+    const elementAtPoint = document.elementFromPoint(x, y);
+    
+    if (elementAtPoint) {
+        // Check if it's a dot button or contains a dot button
+        let targetButton = elementAtPoint;
+        
+        // If it's not a button itself, check if it's inside a button
+        if (!targetButton.classList.contains('dot-key') && !targetButton.classList.contains('space-key')) {
+            targetButton = elementAtPoint.closest('.dot-key, .space-key');
+        }
+        
+        if (targetButton && (targetButton.classList.contains('dot-key') || targetButton.classList.contains('space-key'))) {
+            const key = targetButton.getAttribute('data-key');
+            console.log(`  ✓ Direct visual hit on key ${key} using elementFromPoint`);
+            
+            // Find the corresponding zone for this button
+            const zone = touchZones.get(key);
+            if (zone) {
+                return { key, zone, type: 'direct' };
+            }
+        }
+    }
+    
+    // Fallback to zone-based detection for fuzzy matching
     for (const [key, zone] of touchZones) {
-        // Check if touch is within exact zone boundaries
+        // Check if touch is within zone boundaries
         if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
             directHit = { key, zone, type: 'direct' };
-            console.log(`  ✓ Direct hit on key ${key}`);
+            console.log(`  ✓ Direct hit on key ${key} within zone`);
             break; // Prioritize exact hits
         }
         
