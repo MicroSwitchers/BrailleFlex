@@ -18,7 +18,7 @@ let deferredPrompt = null;
 let swRegistration = null;
 let touchZones = new Map();
 let activeTouches = new Map();
-let touchSensitivity = 1.8; // Multiplier for touch zone expansion
+let touchSensitivity = 1.0; // Now used for fuzzy matching distance (no zone expansion)
 
 const brailleGrid = document.getElementById('braille-grid');
 const allClearBtn = document.getElementById('allClearBtn');
@@ -506,11 +506,8 @@ function updateTouchSensitivity() {
     touchSensitivity = parseFloat(touchSensitivitySlider.value);
     touchSensitivityValue.textContent = touchSensitivity;
     
-    // Recalculate touch zones with new sensitivity
-    setTimeout(() => {
-        touchZones.clear();
-        initializeTouchZones();
-    }, 100);
+    // Touch zones now use exact boundaries, so sensitivity only affects fuzzy matching
+    // No need to recalculate zones, just update the fuzzy matching threshold
 }
 
 function mapSliderValue(value) {
@@ -592,8 +589,8 @@ function loadSettings() {
                 touchSensitivitySlider.value = touchSens;
                 touchSensitivity = touchSens;
             } else {
-                touchSensitivitySlider.value = 1.8;
-                touchSensitivity = 1.8;
+                touchSensitivitySlider.value = 1.0;
+                touchSensitivity = 1.0;
             }
             
             // Validate and apply width setting
@@ -661,8 +658,8 @@ function resetToDefaults() {
     heightSlider.value = DEFAULT_HEIGHT;
     arcSlider.value = DEFAULT_ARC;
     rotationSlider.value = DEFAULT_ROTATION;
-    touchSensitivitySlider.value = 1.8;
-    touchSensitivity = 1.8;
+    touchSensitivitySlider.value = 1.0;
+    touchSensitivity = 1.0;
     spacingSlider.value = 20;
     verticalOffsetSlider.value = 0;
     highContrastToggle.checked = false;
@@ -689,57 +686,81 @@ function resetToDefaults() {
 function initializeTouchZones() {
     dotButtons.forEach(btn => {
         const rect = btn.getBoundingClientRect();
-        const expandedZone = {
-            left: rect.left - (rect.width * touchSensitivity - rect.width) / 2,
-            right: rect.right + (rect.width * touchSensitivity - rect.width) / 2,
-            top: rect.top - (rect.height * touchSensitivity - rect.height) / 2,
-            bottom: rect.bottom + (rect.height * touchSensitivity - rect.height) / 2,
+        
+        // Use exact button boundaries to prevent overlap
+        // Only add minimal padding (2px) for edge cases
+        const padding = 2;
+        const exactZone = {
+            left: rect.left - padding,
+            right: rect.right + padding,
+            top: rect.top - padding,
+            bottom: rect.bottom + padding,
             button: btn,
             key: btn.getAttribute('data-key')
         };
-        touchZones.set(btn.getAttribute('data-key'), expandedZone);
+        touchZones.set(btn.getAttribute('data-key'), exactZone);
+        
+        // Debug: Log the touch zone for verification  
+        // console.log(`Touch zone for key ${btn.getAttribute('data-key')}:`, exactZone);
     });
     
-    // Also add space button
+    // Also add space button with minimal expansion
     const spaceRect = spaceButton.getBoundingClientRect();
     const spaceZone = {
-        left: spaceRect.left - (spaceRect.width * 1.5 - spaceRect.width) / 2,
-        right: spaceRect.right + (spaceRect.width * 1.5 - spaceRect.width) / 2,
-        top: spaceRect.top - (spaceRect.height * 1.5 - spaceRect.height) / 2,
-        bottom: spaceRect.bottom + (spaceRect.height * 1.5 - spaceRect.height) / 2,
+        left: spaceRect.left - 5,
+        right: spaceRect.right + 5,
+        top: spaceRect.top - 5,
+        bottom: spaceRect.bottom + 5,
         button: spaceButton,
         key: 'space'
     };
     touchZones.set('space', spaceZone);
+    
+    console.log(`Touch zones initialized for ${touchZones.size} buttons (exact boundaries)`);
 }
 
-// Find which key is being touched (including fuzzy matching)
+// Find which key is being touched (prioritize exact hits)
 function findTouchedKey(x, y) {
-    let bestMatch = null;
+    let directHit = null;
+    let bestFuzzyMatch = null;
     let closestDistance = Infinity;
     
+    // console.log(`  🎯 Finding key for touch at (${x}, ${y})`);
+    
     for (const [key, zone] of touchZones) {
-        // Check if touch is within expanded zone
+        // Check if touch is within exact zone boundaries
         if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
-            return { key, zone, type: 'direct' };
+            directHit = { key, zone, type: 'direct' };
+            console.log(`  ✓ Direct hit on key ${key}`);
+            break; // Prioritize exact hits
         }
         
-        // Calculate distance to zone center for fuzzy matching
+        // Calculate distance to zone center for fuzzy matching (fallback only)
         const centerX = (zone.left + zone.right) / 2;
         const centerY = (zone.top + zone.bottom) / 2;
         const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
         
         if (distance < closestDistance) {
             closestDistance = distance;
-            bestMatch = { key, zone, type: 'fuzzy', distance };
+            bestFuzzyMatch = { key, zone, type: 'fuzzy', distance };
         }
+        
+        // console.log(`    Key ${key}: distance: ${distance.toFixed(1)}`);
     }
     
-    // Return fuzzy match if within reasonable distance (100px)
-    if (bestMatch && bestMatch.distance < 100) {
-        return bestMatch;
+    // Return direct hit if found
+    if (directHit) {
+        return directHit;
     }
     
+    // Only use fuzzy match if no direct hit and within sensitivity-based distance
+    const maxFuzzyDistance = 30 * touchSensitivity; // Base 30px scaled by sensitivity
+    if (bestFuzzyMatch && bestFuzzyMatch.distance < maxFuzzyDistance) {
+        console.log(`  ⚠ Using fuzzy match for key ${bestFuzzyMatch.key} at distance ${bestFuzzyMatch.distance.toFixed(1)} (max: ${maxFuzzyDistance.toFixed(1)})`);
+        return bestFuzzyMatch;
+    }
+    
+    console.log(`  ✗ No key found for touch at (${x}, ${y})`);
     return null;
 }
 
