@@ -394,6 +394,12 @@ body.high-contrast .dropdown-content {
     /* background: rgba(255, 0, 0, 0.1); border: 1px dashed red; */
 }
 
+/* Completely disable pointer events on individual buttons to prevent hit box conflicts */
+.key.dot-key,
+.key.space-key {
+    pointer-events: none;
+}
+
 .key.dot-key {
     width: 80px;
     height: 100px;

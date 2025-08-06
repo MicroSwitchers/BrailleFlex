@@ -1126,12 +1126,10 @@ dotButtons.forEach(btn => {
         }
     };
 
-    // Mouse events for desktop compatibility (keep these for non-touch devices)
-    btn.addEventListener('mousedown', handleTouchStart);
-    btn.addEventListener('mouseup', handleTouchEnd);
-    btn.addEventListener('mouseleave', handleTouchEnd);
+    // All events (mouse and touch) are now handled by the container-level system
+    // Individual button events are disabled via CSS pointer-events: none
     
-    // Note: Touch events are handled by the container-level multi-touch system above
+    // Note: Touch events are handled exclusively by the container-level multi-touch system
 });
 
 // Enhanced space button handling
@@ -1163,9 +1161,8 @@ const handleSpaceRelease = (e) => {
     spaceButton.classList.remove('active', 'touch-hover', 'near-press');
 };
 
-// Keep mouse events for desktop compatibility
-spaceButton.addEventListener('mousedown', handleSpaceTouch);
-spaceButton.addEventListener('mouseup', handleSpaceRelease);
+// All events (mouse and touch) are now handled by the container-level system
+// Individual button events are disabled via CSS pointer-events: none
 
 // Note: Touch events for space button are handled by the container-level multi-touch system
 
@@ -1309,6 +1306,87 @@ keyContainer.addEventListener('touchcancel', (e) => {
         setTimeout(() => moveCursor(0, 1), 100);
     }
 }, { passive: false });
+
+// Add mouse hover handling to container for visual feedback
+keyContainer.addEventListener('mousemove', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Clear any existing hover states
+    document.querySelectorAll('.key').forEach(btn => {
+        btn.classList.remove('touch-hover');
+    });
+    
+    // Find the element under the mouse
+    const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+    if (targetElement && (targetElement.classList.contains('dot-key') || targetElement.classList.contains('space-key'))) {
+        targetElement.classList.add('touch-hover');
+    }
+});
+
+// Clear hover states when mouse leaves the container
+keyContainer.addEventListener('mouseleave', (e) => {
+    document.querySelectorAll('.key').forEach(btn => {
+        btn.classList.remove('touch-hover');
+    });
+});
+
+// Add mouse click handling to container
+keyContainer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Find the element under the mouse
+    const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+    if (targetElement && (targetElement.classList.contains('dot-key') || targetElement.classList.contains('space-key'))) {
+        // Handle the click using the same logic as touch
+        const key = targetElement.getAttribute('data-key');
+        
+        if (key === 'space') {
+            addSpace();
+            targetElement.classList.add('active');
+            setTimeout(() => targetElement.classList.remove('active'), 150);
+        } else if (KEY_MAP.hasOwnProperty(key)) {
+            // Toggle braille dot
+            if (activeKeys.has(key)) {
+                activeKeys.delete(key);
+                targetElement.classList.remove('active');
+            } else {
+                activeKeys.add(key);
+                targetElement.classList.add('active');
+                isChordActive = true;
+            }
+        }
+    }
+});
+
+// Handle mouse up to complete braille chord if needed
+keyContainer.addEventListener('mouseup', (e) => {
+    // If we have active braille keys and this was a braille interaction, complete the chord
+    if (activeKeys.size > 0 && isChordActive) {
+        setTimeout(() => {
+            if (activeKeys.size > 0) {
+                let dotPattern = 0;
+                activeKeys.forEach(key => {
+                    dotPattern |= KEY_MAP[key];
+                });
+                
+                setBrailleCell(cursorRow, cursorCol, dotPattern);
+                
+                // Clear active states
+                activeKeys.forEach(key => {
+                    const button = document.querySelector(`[data-key="${key}"]`);
+                    if (button) button.classList.remove('active');
+                });
+                activeKeys.clear();
+                isChordActive = false;
+                
+                // Move cursor
+                moveCursor(0, 1);
+            }
+        }, 100);
+    }
+});
 
 // Set the sliders to start at the middle position (will be overridden by loadSettings)
 heightSlider.value = DEFAULT_HEIGHT;
