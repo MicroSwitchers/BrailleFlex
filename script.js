@@ -1061,16 +1061,12 @@ dotButtons.forEach(btn => {
         }
     };
 
-    // Enhanced event listeners
-    btn.addEventListener('touchstart', handleTouchStart, { passive: false });
-    btn.addEventListener('touchend', handleTouchEnd, { passive: false });
-    btn.addEventListener('touchmove', handleTouchMove, { passive: false });
-    btn.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-    
-    // Mouse events for desktop (simplified)
+    // Mouse events for desktop compatibility (keep these for non-touch devices)
     btn.addEventListener('mousedown', handleTouchStart);
     btn.addEventListener('mouseup', handleTouchEnd);
     btn.addEventListener('mouseleave', handleTouchEnd);
+    
+    // Note: Touch events are handled by the container-level multi-touch system above
 });
 
 // Enhanced space button handling
@@ -1102,32 +1098,132 @@ const handleSpaceRelease = (e) => {
     spaceButton.classList.remove('active', 'touch-hover', 'near-press');
 };
 
-spaceButton.addEventListener('touchstart', handleSpaceTouch, { passive: false });
-spaceButton.addEventListener('touchend', handleSpaceRelease, { passive: false });
+// Keep mouse events for desktop compatibility
 spaceButton.addEventListener('mousedown', handleSpaceTouch);
 spaceButton.addEventListener('mouseup', handleSpaceRelease);
 
+// Note: Touch events for space button are handled by the container-level multi-touch system
+
 // Global touch handler for the entire key container (multi-touch support)
 const keyContainer = document.querySelector('.key-container');
+
+// Enhanced multi-touch handler for braille input
 keyContainer.addEventListener('touchstart', (e) => {
-    // Handle multiple simultaneous touches
-    Array.from(e.touches).forEach(touch => {
+    e.preventDefault();
+    
+    // Initialize touch zones if not done
+    if (touchZones.size === 0) {
+        initializeTouchZones();
+    }
+    
+    // Debug: Log multi-touch detection
+    if (e.changedTouches.length > 1) {
+        console.log(`Multi-touch detected: ${e.changedTouches.length} simultaneous touches`);
+    }
+    
+    // Handle each new touch
+    Array.from(e.changedTouches).forEach(touch => {
         const touchedKey = findTouchedKey(touch.clientX, touch.clientY);
-        if (touchedKey && touchedKey.type === 'direct') {
-            // This ensures even imperfect touches are registered
-            const syntheticEvent = {
-                touches: [touch],
-                preventDefault: () => {},
-                target: touchedKey.zone.button
-            };
-            // Trigger the button's touch handler
-            if (touchedKey.zone.button !== spaceButton) {
-                touchedKey.zone.button.dispatchEvent(new CustomEvent('touchstart', {
-                    detail: { synthetic: true, touch }
-                }));
+        
+        if (touchedKey && touchedKey.zone) {
+            const key = touchedKey.key;
+            const button = touchedKey.zone.button;
+            
+            console.log(`Touch detected on key: ${key}`);
+            
+            if (key === 'space') {
+                // Handle space button
+                provideTouchFeedback(spaceButton, touchedKey.type);
+                handleSpace();
+                spaceButton.classList.add('active');
+                
+                // Store space touch
+                activeTouches.set(touch.identifier, { key: 'space', button: spaceButton });
+                
+                // Haptic feedback
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(15);
+                }
+            } else if (KEY_MAP.hasOwnProperty(key) && !activeKeys.has(key)) {
+                // Handle braille dot keys
+                activeKeys.add(key);
+                currentCell[KEY_MAP[key]] = 1;
+                isChordActive = true;
+                updateGrid();
+                button.classList.add('active');
+                
+                // Store touch info with unique touch ID
+                activeTouches.set(touch.identifier, { key, button });
+                
+                // Provide visual/haptic feedback
+                provideTouchFeedback(button, touchedKey.type);
+                
+                console.log(`Active keys: ${Array.from(activeKeys).join(', ')}`);
             }
         }
     });
+}, { passive: false });
+
+keyContainer.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    clearTouchFeedback();
+    
+    // Handle each released touch
+    Array.from(e.changedTouches).forEach(touch => {
+        if (activeTouches.has(touch.identifier)) {
+            const touchInfo = activeTouches.get(touch.identifier);
+            const key = touchInfo.key;
+            const button = touchInfo.button;
+            
+            if (key === 'space') {
+                // Handle space button release
+                spaceButton.classList.remove('active', 'touch-hover', 'near-press');
+            } else if (KEY_MAP.hasOwnProperty(key)) {
+                // Handle braille dot key release
+                activeKeys.delete(key);
+                button.classList.remove('active');
+            }
+            
+            activeTouches.delete(touch.identifier);
+        }
+    });
+    
+    // If all braille touches are released and we had an active chord, move cursor
+    if (activeKeys.size === 0 && isChordActive) {
+        isChordActive = false;
+        setTimeout(() => moveCursor(0, 1), 100); // Small delay for chord completion
+    }
+}, { passive: false });
+
+keyContainer.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    clearTouchFeedback();
+    
+    // Handle cancelled touches
+    Array.from(e.changedTouches).forEach(touch => {
+        if (activeTouches.has(touch.identifier)) {
+            const touchInfo = activeTouches.get(touch.identifier);
+            const key = touchInfo.key;
+            const button = touchInfo.button;
+            
+            if (key === 'space') {
+                // Handle space button cancel
+                spaceButton.classList.remove('active', 'touch-hover', 'near-press');
+            } else if (KEY_MAP.hasOwnProperty(key)) {
+                // Handle braille dot key cancel
+                activeKeys.delete(key);
+                button.classList.remove('active');
+            }
+            
+            activeTouches.delete(touch.identifier);
+        }
+    });
+    
+    // If all braille touches are cancelled and we had an active chord, move cursor
+    if (activeKeys.size === 0 && isChordActive) {
+        isChordActive = false;
+        setTimeout(() => moveCursor(0, 1), 100);
+    }
 }, { passive: false });
 
 // Set the sliders to start at the middle position (will be overridden by loadSettings)
