@@ -3,62 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrailleFlex</title>
+    <meta name="description" content="BrailleFlex - A modern, accessible Braille writing simulator with customizable keyboard and export features">
+    <meta name="keywords" content="braille, accessibility, writing, simulator, assistive technology">
+    <meta name="author" content="BrailleFlex">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2196f3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="BrailleFlex">
+    <meta name="msapplication-TileColor" content="#2196f3">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    
+    <title>BrailleFlex - Braille Writing Simulator</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="brailleblue.svg">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="brailleblue.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="brailleblue.svg">
+    <link rel="apple-touch-icon" sizes="120x120" href="brailleblue.svg">
+    
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-square70x70logo" content="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232196f3'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>🟦</text></svg>">
+    <meta name="msapplication-square150x150logo" content="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232196f3'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>🟦</text></svg>">
 </head>
 <body>
     <div id="braille-writer-app" class="card">
         <div class="card-header">
+            <img src="brailleblue.svg" class="app-icon" alt="BrailleFlex Icon" style="width: 32px; height: 32px; margin-right: 10px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));">
             <h2 id="braille-writer-simulator" class="card-title">BrailleFlex</h2>
             <div class="header-buttons">
-                <button id="allClearBtn" class="small-button">Clear</button>
-                <button id="fullScreenBtn" class="small-button">Full</button>
-                <button id="settings-toggle" class="small-button">Settings</button>
+                <button id="allClearBtn" class="small-button" aria-label="Clear Braille Grid">Clear</button>
+                <button id="fullScreenBtn" class="small-button" aria-label="Toggle Fullscreen">Full</button>
+                <button id="settings-toggle" class="small-button" aria-label="Open Settings">Settings</button>
+                <div class="dropdown" id="exportImportDropdown">
+                    <button id="dropdownToggleBtn" class="small-button" aria-haspopup="true" aria-expanded="false">
+                        Export/Import ▼
+                    </button>
+                    <div class="dropdown-content" id="dropdownContent" style="display: none;">
+                        <button id="exportUnicodeBtn" class="small-button" aria-label="Export Unicode Braille">Export Unicode</button>
+                        <button id="importUnicodeBtn" class="small-button" aria-label="Import Unicode Braille">Import Unicode</button>
+                        <input type="file" id="fileInput" accept=".txt" style="display: none;">
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="card-content">
-            <div id="braille-grid" class="braille-grid"></div>
+            <div id="braille-grid" class="braille-grid">
+                <!-- Optionally add row/col numbers here -->
+            </div>
 
             <div class="compact-buttons">
-                <button id="upBtn" class="nav-button">↑</button>
-                <button id="leftBtn" class="nav-button">←</button>
-                <button id="rightBtn" class="nav-button">→</button>
-                <button id="downBtn" class="nav-button">↓</button>
-                <button id="backspaceBtn" class="nav-button" data-key="backspace">⌫</button>
-                <button id="enterBtn" class="nav-button" data-key="enter">⏎</button>
+                <button id="upBtn" class="nav-button" aria-label="Move Up">↑</button>
+                <button id="leftBtn" class="nav-button" aria-label="Move Left">←</button>
+                <button id="rightBtn" class="nav-button" aria-label="Move Right">→</button>
+                <button id="downBtn" class="nav-button" aria-label="Move Down">↓</button>
+                <button id="backspaceBtn" class="nav-button" data-key="backspace" aria-label="Backspace">⌫</button>
+                <button id="enterBtn" class="nav-button" data-key="enter" aria-label="Enter">⏎</button>
             </div>
 
             <div class="key-container">
-                <button id="dot3Btn" class="key dot-key" data-key="s">3 (s)</button>
-                <button id="dot2Btn" class="key dot-key" data-key="d">2 (d)</button>
-                <button id="dot1Btn" class="key dot-key" data-key="f">1 (f)</button>
-                <button id="spaceBtn" class="key space-key" data-key="space">Space</button>
-                <button id="dot4Btn" class="key dot-key" data-key="j">4 (j)</button>
-                <button id="dot5Btn" class="key dot-key" data-key="k">5 (k)</button>
-                <button id="dot6Btn" class="key dot-key" data-key="l">6 (l)</button>
+                <button id="dot3Btn" class="key dot-key" data-key="s" title="Dot 3 (S)">3 (s)</button>
+                <button id="dot2Btn" class="key dot-key" data-key="d" title="Dot 2 (D)">2 (d)</button>
+                <button id="dot1Btn" class="key dot-key" data-key="f" title="Dot 1 (F)">1 (f)</button>
+                <button id="spaceBtn" class="key space-key" data-key="space" title="Space">Space</button>
+                <button id="dot4Btn" class="key dot-key" data-key="j" title="Dot 4 (J)">4 (j)</button>
+                <button id="dot5Btn" class="key dot-key" data-key="k" title="Dot 5 (K)">5 (k)</button>
+                <button id="dot6Btn" class="key dot-key" data-key="l" title="Dot 6 (L)">6 (l)</button>
             </div>
         </div>
     </div>
 
-    <div id="settings-drawer" class="settings-drawer">
-        <button id="settings-close" class="settings-close">X</button>
+    <div id="settings-drawer" class="settings-drawer" aria-label="Settings Panel">
+        <button id="settings-close" class="settings-close" aria-label="Close Settings">X</button>
         <div class="settings-content">
             <h3 class="settings-title">Settings</h3>
-            <div class="slider-container">
-                <div class="slider-section">
-                    <label for="heightSlider">Key Height: <span id="heightValue">140</span> px</label>
-                    <input type="range" id="heightSlider" min="90" max="190" step="10" value="140">
+            
+            <!-- Key Configuration Section -->
+            <div class="settings-section">
+                <h4 class="section-title">Key Configuration</h4>
+                <div class="slider-container">
+                    <div class="slider-section">
+                        <label for="heightSlider">Key Height: <span id="heightValue">0</span></label>
+                        <input type="range" id="heightSlider" min="-10" max="10" step="1" value="0">
+                    </div>
+                    <div class="slider-section">
+                        <label for="spacingSlider">Key Spacing: <span id="spacingValue">0</span></label>
+                        <input type="range" id="spacingSlider" min="-10" max="10" step="1" value="0">
+                    </div>
+                    <div class="slider-section">
+                        <label for="arcSlider">Key Arc: <span id="arcValue">0</span></label>
+                        <input type="range" id="arcSlider" min="-10" max="10" step="1" value="0">
+                    </div>
+                    <div class="slider-section">
+                        <label for="rotationSlider">Key Rotation: <span id="rotationValue">0</span></label>
+                        <input type="range" id="rotationSlider" min="-10" max="10" step="1" value="0">
+                    </div>
+                    <div class="slider-section">
+                        <label for="verticalOffsetSlider">Vertical Position: <span id="verticalOffsetValue">0</span></label>
+                        <input type="range" id="verticalOffsetSlider" min="-20" max="20" step="1" value="0">
+                    </div>
+                    <div class="slider-section">
+                        <label for="touchSensitivitySlider">Touch Sensitivity: <span id="touchSensitivityValue">1.8</span></label>
+                        <input type="range" id="touchSensitivitySlider" min="1.2" max="3.0" step="0.2" value="1.8">
+                        <div style="font-size:0.7em; color:var(--primary-color); opacity:0.8; margin-top:5px;">
+                            Higher values = easier to activate keys with imperfect touches
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="slider-section">
-                    <label for="arcSlider">Key Arc: <span id="arcValue">40</span> px</label>
-                    <input type="range" id="arcSlider" min="0" max="80" step="5" value="40">
+            <!-- Display Options Section -->
+            <div class="settings-section">
+                <h4 class="section-title">Display Options</h4>
+                <div class="checkbox-container">
+                    <div class="checkbox-section">
+                        <label>
+                            <input type="checkbox" id="highContrastToggle">
+                            High Contrast Mode
+                        </label>
+                    </div>
+                    <div class="checkbox-section">
+                        <label>
+                            <input type="checkbox" id="hideGuideDotsToggle" checked>
+                            Show Guide Dots
+                        </label>
+                        <div style="font-size:0.7em; color:var(--primary-color); opacity:0.8; margin-top:2px;">
+                            Light dots showing braille letter positions
+                        </div>
+                    </div>
+                    <div class="checkbox-section">
+                        <label>
+                            <input type="checkbox" id="showLineGuideToggle">
+                            Show Line Guide
+                        </label>
+                        <div style="font-size:0.7em; color:var(--primary-color); opacity:0.8; margin-top:2px;">
+                            Line under current row for visual tracking
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="slider-section">
-                    <label for="rotationSlider">Key Rotation: <span id="rotationValue">15</span>°</label>
-                    <input type="range" id="rotationSlider" min="0" max="30" step="5" value="15">
+            <!-- Action Buttons -->
+            <div class="settings-section">
+                <button id="resetSettingsBtn" class="small-button" style="margin-top:10px;">Reset to Default</button>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div class="settings-section">
+                <h4 class="section-title">Keyboard Shortcuts</h4>
+                <div style="font-size:0.8em; line-height:1.4; color:var(--primary-color);">
+                    <p><strong>F/D/S/J/K/L:</strong> Braille dots 1-6</p>
+                    <p><strong>Space:</strong> Move to next cell</p>
+                    <p><strong>Enter:</strong> New line</p>
+                    <p><strong>Backspace:</strong> Delete previous cell</p>
+                    <p><strong>Arrow keys:</strong> Navigate grid</p>
+                    <p><strong>Escape:</strong> Close settings panel</p>
                 </div>
             </div>
         </div>
